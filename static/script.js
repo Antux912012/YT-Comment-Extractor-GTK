@@ -1,9 +1,9 @@
 let currentComments = [];
+let isAuth = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     const searchBtn = document.getElementById('searchBtn');
     const videoUrl = document.getElementById('videoUrl');
-    const extractMethod = document.getElementById('extractMethod');
     const sortMode = document.getElementById('sortMode');
     const numComments = document.getElementById('numComments');
     const selectionMode = document.getElementById('selectionMode');
@@ -17,10 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const consoleWindow = document.getElementById('consoleWindow');
     const consoleOutput = document.getElementById('consoleOutput');
 
-    // Settings Modal Elements
-    const settingsBtn = document.getElementById('settingsBtn');
-    const settingsModal = document.getElementById('settingsModal');
-    const apiStatusBox = document.getElementById('apiStatusBox');
+    // Auth Bar Elements
+    const authStatusText = document.getElementById('authStatusText');
+    const authActionBox = document.getElementById('authActionBox');
 
     // Theme Toggle
     document.getElementById('themeToggle').addEventListener('click', (e) => {
@@ -30,45 +29,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Check statuses on load
     function updateStatuses() {
-        fetch('/api/settings/cookies').then(r => r.json()).then(d => {
-            const cs = document.getElementById('cookiesStatus');
-            if (d.has_cookies) { cs.textContent = '✅ Cookies saved and active'; cs.style.color = 'green'; }
-            else { cs.textContent = '❌ No cookies saved'; cs.style.color = 'red'; }
-        });
         fetch('/api/auth/status').then(r => r.json()).then(d => {
+            isAuth = d.logged_in;
             if (!d.configured) {
-                apiStatusBox.innerHTML = '<p style="color:red;font-weight:bold;">❌ API Not Configured</p><p style="font-size:0.85em;">The server host must set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables to use this feature.</p>';
+                authStatusText.innerHTML = '<span style="color:#ef4444;font-weight:bold;">❌ API Not Configured</span> (Missing Google Client Keys)';
+                authActionBox.innerHTML = '';
+                searchBtn.disabled = true;
+                searchBtn.textContent = 'API keys missing';
             } else if (d.logged_in) {
-                apiStatusBox.innerHTML = '<p style="color:green;font-weight:bold;">✅ Signed in with Google</p><button id="googleLogoutBtn" class="btn btn-copy-json" style="margin-top:10px;width:100%">Sign Out</button>';
+                authStatusText.innerHTML = '<span style="color:#10b981;font-weight:bold;">✅ Signed in securely</span>';
+                authActionBox.innerHTML = '<button id="googleLogoutBtn" class="btn btn-copy-json" style="padding: 8px 16px;">Sign Out</button>';
                 document.getElementById('googleLogoutBtn').addEventListener('click', () => {
                     fetch('/api/auth/logout').then(() => updateStatuses());
                 });
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Extract Comments';
             } else {
-                apiStatusBox.innerHTML = '<p style="color:orange;font-weight:bold;">⚠️ Not signed in</p><button id="googleLoginBtn" class="btn btn-download" style="margin-top:10px;width:100%">Sign in with Google</button>';
+                authStatusText.innerHTML = '<span style="color:#f59e0b;font-weight:bold;">⚠️ Not signed in</span> (Required to fetch comments)';
+                authActionBox.innerHTML = '<button id="googleLoginBtn" class="btn btn-download" style="padding: 8px 16px;">Sign in with Google</button>';
                 document.getElementById('googleLoginBtn').addEventListener('click', () => {
                     window.location.href = '/api/auth/login';
                 });
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Sign In Required';
             }
         });
     }
-
-    settingsBtn.addEventListener('click', () => {
-        settingsModal.classList.add('active');
-        updateStatuses();
-    });
-    document.getElementById('settingsModalClose').addEventListener('click', () => settingsModal.classList.remove('active'));
-
-    document.getElementById('saveCookiesBtn').addEventListener('click', async () => {
-        const cookies = document.getElementById('cookiesInput').value.trim();
-        if (!cookies) return alert('Enter cookies first.');
-        const res = await fetch('/api/settings/cookies', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cookies}) });
-        if (res.ok) { alert('Cookies saved!'); document.getElementById('cookiesInput').value = ''; updateStatuses(); }
-        else alert('Error saving cookies');
-    });
-
-    document.getElementById('clearCookiesBtn').addEventListener('click', async () => {
-        if (await fetch('/api/settings/cookies', { method: 'DELETE' }).then(r=>r.ok)) { alert('Cleared'); updateStatuses(); }
-    });
 
     function appendLog(text) {
         const div = document.createElement('div');
@@ -87,6 +73,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Extract Comments
     searchBtn.addEventListener('click', async () => {
+        if (!isAuth) {
+            window.location.href = '/api/auth/login';
+            return;
+        }
+
         const url = videoUrl.value.trim();
         if (!url) return showError('Please enter a YouTube video URL');
 
@@ -103,7 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     url: url,
-                    method: extractMethod.value,
                     sort_mode: sortMode.value,
                     num_comments: numComments.value,
                     selection_mode: selectionMode.value
@@ -143,6 +133,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { 
             appendLog(`[ERROR] ${error.message}`);
             showError(error.message); 
+            if (error.message.includes('Session expired')) {
+                updateStatuses();
+            }
         } finally {
             searchBtn.disabled = false;
         }
@@ -193,5 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsSection.style.display = 'none';
     }
     function hideError() { errorMessage.style.display = 'none'; }
+    
     updateStatuses();
 });

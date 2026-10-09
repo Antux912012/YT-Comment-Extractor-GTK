@@ -5,16 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Comments Extractor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .auth-bar { background: #f8fafc; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; border-radius: 12px 12px 0 0; }
+        .theme-dark .auth-bar { background: #1e293b; border-bottom-color: #334155; }
+    </style>
 </head>
 <body>
     <div class="container">
+        <!-- Auth Bar -->
+        <div class="auth-bar" id="authBar">
+            <div id="authStatusText">Checking authentication...</div>
+            <div id="authActionBox"></div>
+        </div>
+
         <!-- Header -->
-        <div class="header">
+        <div class="header" style="border-radius: 0;">
             <h1>YouTube Comments Extractor</h1>
-            <p class="subtitle">Extract random comments or download all comments from any YouTube video</p>
+            <p class="subtitle">Extract comments seamlessly using the Official YouTube API</p>
             <div style="margin-top: 15px;">
                 <button id="themeToggle" class="theme-toggle-button" type="button">Switch to dark mode</button>
-                <button id="settingsBtn" class="theme-toggle-button" style="margin-left: 10px;" type="button">⚙️ Extraction Settings</button>
             </div>
         </div>
 
@@ -29,10 +38,6 @@
                     autocomplete="off"
                     style="flex: 1 1 100%;"
                 >
-                <select id="extractMethod" class="comments-select" style="background-color: #e2e8f0; flex: 1;">
-                    <option value="scraper" selected>🕵️ Method: Scraper (Cookies)</option>
-                    <option value="api">🌐 Method: Official API (Login)</option>
-                </select>
                 <select id="sortMode" class="comments-select" style="flex: 1;">
                     <option value="popular" selected>Sort: Top Popular</option>
                     <option value="recent">Sort: Newest First</option>
@@ -63,7 +68,7 @@
         </div>
 
         <!-- Error Message -->
-        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        <div id="errorMessage" class="error-message" style="display: none; margin: 20px;"></div>
 
         <!-- Results Section -->
         <div id="resultsSection" class="results-section" style="display: none;">
@@ -92,7 +97,7 @@
         <!-- Info Section -->
         <div class="info-section">
             <h3>How sampling works:</h3>
-            <p>To avoid popularity biases, selecting <strong>Random Sample</strong> triggers a "Deep Scan". The app fetches thousands of comments in the background before randomizing them. This guarantees true randomness across the entire video, but may take 5-10 seconds longer!</p>
+            <p>To avoid popularity biases, selecting <strong>Random Sample</strong> triggers a "Deep Scan". The app fetches thousands of comments in the background before randomizing them. This guarantees true randomness across the entire video!</p>
         </div>
     </div>
 
@@ -107,35 +112,6 @@
             <div class="json-modal-footer">
                 <button id="copyJsonBtn" class="btn btn-copy-json">Copy JSON</button>
                 <button id="jsonModalCloseBtn" class="btn json-modal-close-btn">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="json-modal">
-        <div class="json-modal-content">
-            <div class="json-modal-header">
-                <h3>Extraction Settings</h3>
-                <button id="settingsModalClose" class="json-modal-close">&times;</button>
-            </div>
-            <div class="json-modal-body" style="display: flex; gap: 20px;">
-                <div style="flex: 1; padding-right: 20px; border-right: 1px solid #ccc;">
-                    <h4>🌐 Method: Official API</h4>
-                    <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">Authenticate with Google to securely fetch restricted comments using the official API.</p>
-                    <div id="apiStatusBox" style="padding: 15px; background: #e2e8f0; border-radius: 8px;">
-                        Loading status...
-                    </div>
-                </div>
-                <div style="flex: 1;">
-                    <h4>🕵️ Method: Scraper (Cookies)</h4>
-                    <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">Paste Netscape format cookies.txt content to bypass age/login restrictions manually.</p>
-                    <p id="cookiesStatus" style="font-weight: bold; margin-bottom: 5px;"></p>
-                    <textarea id="cookiesInput" style="width: 100%; height: 120px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; padding: 10px;"></textarea>
-                    <div style="margin-top: 10px; display: flex; gap: 10px;">
-                        <button id="saveCookiesBtn" class="btn btn-download">Save Cookies</button>
-                        <button id="clearCookiesBtn" class="btn btn-copy-json">Clear</button>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
