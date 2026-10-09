@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=YouTube Comment Extractor
+GenericName=Comment Extractor
+Comment=Extract and analyze YouTube video comments with GTK4 and Libadwaita
+Exec=start-yt-extractor
+Icon=io.github.antux912012.YTCommentExtractor
+Terminal=false
+Type=Application
+Categories=Utility;AudioVideo;Network;
+StartupNotify=true

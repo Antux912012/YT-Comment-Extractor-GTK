@@ -9,6 +9,7 @@ finish-args:
   - --socket=fallback-x11
   - --socket=wayland
   - --filesystem=xdg-download
+  - --filesystem=home
   - --device=dri
 modules:
   - name: python-deps
@@ -28,6 +29,7 @@ modules:
       - mkdir -p /app/share/yt-extractor
       - cp scraper.py main_gtk.py /app/share/yt-extractor/
       - install -D start-yt-extractor /app/bin/start-yt-extractor
+      - install -D io.github.antux912012.YTCommentExtractor.desktop /app/share/applications/io.github.antux912012.YTCommentExtractor.desktop
     sources:
       - type: dir
         path: .
