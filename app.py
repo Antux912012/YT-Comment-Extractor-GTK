@@ -12,12 +12,56 @@ from datetime import datetime, timedelta
 import webview
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
+app.secret_key = get_secret_key()
 
-# Google OAuth Constants
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
-GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:5000/api/auth/callback")
+
+
+import configparser
+from pathlib import Path
+import os
+
+CONFIG_DIR = Path.home() / '.config' / 'yt-comment-extractor'
+CONFIG_FILE = CONFIG_DIR / 'config.ini'
+
+def load_config():
+    config = configparser.ConfigParser()
+    if CONFIG_FILE.exists():
+        config.read(CONFIG_FILE)
+    return config
+
+def get_secret_key():
+    config = load_config()
+    if 'APP' in config and 'secret_key' in config['APP']:
+        return bytes.fromhex(config['APP']['secret_key'])
+    
+    # Generate and save a new one
+    new_secret = os.urandom(24).hex()
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    if 'APP' not in config:
+        config['APP'] = {}
+    config['APP']['secret_key'] = new_secret
+    with open(CONFIG_FILE, 'w') as f:
+        config.write(f)
+    return bytes.fromhex(new_secret)
+
+def save_config(client_id, client_secret):
+    config = load_config()
+    if 'OAUTH' not in config:
+        config['OAUTH'] = {}
+    config['OAUTH']['client_id'] = client_id
+    config['OAUTH']['client_secret'] = client_secret
+    with open(CONFIG_FILE, 'w') as f:
+        config.write(f)
+
+def get_oauth_creds():
+    config = load_config()
+    if 'OAUTH' in config:
+        return config['OAUTH'].get('client_id'), config['OAUTH'].get('client_secret')
+    return None, None
+
+GOOGLE_REDIRECT_URI = "http://localhost:5000/api/auth/callback"
+
+
 
 def extract_video_id(url):
     try:
@@ -113,20 +157,39 @@ def get_comments_api_gen(video_id, max_comments, access_token, sort_mode='popula
 # ================== ROUTES ==================
 
 @app.route('/')
-def index(): return render_template('index.html')
+def index(): 
+    client_id, client_secret = get_oauth_creds()
+    if not client_id or not client_secret:
+        return redirect('/setup')
+    return render_template('index.html')
+
+@app.route('/setup', methods=['GET', 'POST'])
+def setup():
+    if request.method == 'POST':
+        client_id = request.form.get('client_id', '').strip()
+        client_secret = request.form.get('client_secret', '').strip()
+        if client_id and client_secret:
+            save_config(client_id, client_secret)
+            return redirect('/')
+        return render_template('setup.html', error="Both fields are required.")
+    
+    client_id, client_secret = get_oauth_creds()
+    return render_template('setup.html', client_id=client_id or '', client_secret=client_secret or '')
 
 @app.route('/api/auth/status')
 def auth_status():
+    client_id, client_secret = get_oauth_creds()
     return jsonify({
         'logged_in': 'google_token' in session,
-        'configured': bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+        'configured': bool(client_id and client_secret)
     })
 
 @app.route('/api/auth/login')
 def login():
-    if not GOOGLE_CLIENT_ID: return "Google Client ID not configured.", 500
+    client_id, client_secret = get_oauth_creds()
+    if not client_id: return "Google Client ID not configured.", 500
     params = {
-        'client_id': GOOGLE_CLIENT_ID,
+        'client_id': client_id,
         'redirect_uri': GOOGLE_REDIRECT_URI,
         'response_type': 'code',
         'scope': 'https://www.googleapis.com/auth/youtube.force-ssl',
@@ -137,11 +200,12 @@ def login():
 
 @app.route('/api/auth/callback')
 def auth_callback():
+    client_id, client_secret = get_oauth_creds()
     code = request.args.get('code')
     if not code: return "No code provided", 400
     res = requests.post('https://oauth2.googleapis.com/token', data={
-        'client_id': GOOGLE_CLIENT_ID,
-        'client_secret': GOOGLE_CLIENT_SECRET,
+        'client_id': client_id,
+        'client_secret': client_secret,
         'code': code,
         'grant_type': 'authorization_code',
         'redirect_uri': GOOGLE_REDIRECT_URI

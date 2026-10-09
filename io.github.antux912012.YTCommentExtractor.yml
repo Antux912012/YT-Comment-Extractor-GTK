@@ -1,0 +1,40 @@
+app-id: io.github.antux912012.YTCommentExtractor
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+command: start-yt-extractor
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --filesystem=xdg-download
+  - --device=dri
+modules:
+  - name: python-deps
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+    build-commands:
+      - pip3 install --prefix=/app -r requirements.txt
+    sources:
+      - type: file
+        path: requirements.txt
+
+  - name: yt-extractor
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/share/yt-extractor
+      - cp -r app.py templates/ /app/share/yt-extractor/
+      - mkdir -p /app/bin
+      - cat > /app/bin/start-yt-extractor << 'INNER_EOF'
+        #!/bin/bash
+        export PYTHONPATH="/app/lib/python3.11/site-packages:$PYTHONPATH"
+        cd /app/share/yt-extractor
+        python3 app.py
+        INNER_EOF
+      - chmod +x /app/bin/start-yt-extractor
+    sources:
+      - type: dir
+        path: .
