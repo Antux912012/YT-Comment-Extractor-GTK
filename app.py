@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for, Response, stream_with_context
 import yt_dlp
 import csv
 import io
 import random
 import os
 import re
+import json
 from urllib.parse import urlparse, parse_qs, urlencode
 import requests
 from datetime import datetime, timedelta
@@ -15,7 +16,7 @@ try:
     YOUTUBE_COMMENT_DOWNLOADER_AVAILABLE = True
 except ImportError:
     YOUTUBE_COMMENT_DOWNLOADER_AVAILABLE = False
-    print("Warning: youtube_comment_downloader not available, will use fallback methods")
+    print("Warning: youtube_comment_downloader not available")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
@@ -25,7 +26,6 @@ if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 COOKIES_FILE = os.path.join(DATA_DIR, 'cookies.txt')
 
-# Google OAuth Constants
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:5000/api/auth/callback")
@@ -38,7 +38,7 @@ def extract_video_id(url):
             if '/shorts/' in parsed.path or '/live/' in parsed.path: return parsed.path.split('/')[-1]
         elif 'youtu.be' in parsed.netloc:
             return parsed.path.strip('/').split('?')[0]
-    except Exception as e: print(f"Error extracting video ID: {e}")
+    except Exception as e: pass
     return None
 
 def parse_relative_date_text(text):
@@ -83,23 +83,29 @@ def get_comment_date(comment):
             if parsed: return parsed
     return ''
 
-def get_comments_scraper(video_url, max_comments=None, sort_mode='popular'):
+def get_comments_scraper_gen(video_url, max_comments=None, sort_mode='popular'):
     video_id = extract_video_id(video_url)
-    if not video_id: return []
+    if not video_id: 
+        yield {'error': 'Invalid YouTube URL'}
+        return
+    
     all_comments = []
     
     if YOUTUBE_COMMENT_DOWNLOADER_AVAILABLE:
         try:
+            yield {'log': '[SYSTEM] Initializing scraper engine...'}
             downloader = YoutubeCommentDownloader()
-            if os.path.exists(COOKIES_FILE) and hasattr(downloader, 'session'):
+            if os.path.exists(COOKIES_FILE):
+                yield {'log': '[INFO] Injecting cookies for restricted video bypass...'}
                 cj = http.cookiejar.MozillaCookieJar(COOKIES_FILE)
                 cj.load(ignore_discard=True, ignore_expires=True)
                 downloader.session.cookies.update(cj)
             
-            # sort_by: 0 = popular, 1 = recent
             yt_sort_by = 1 if sort_mode == 'recent' else 0
-            
+            yield {'log': f'[NETWORK] Fetching {sort_mode} comments directly from YouTube...'}
             gen = downloader.get_comments_from_url(f"https://www.youtube.com/watch?v={video_id}", sort_by=yt_sort_by)
+            
+            count = 0
             for comment in gen:
                 text = comment.get('text', '').strip()
                 if not text: continue
@@ -108,17 +114,26 @@ def get_comments_scraper(video_url, max_comments=None, sort_mode='popular'):
                     'date': get_comment_date(comment) or parse_comment_date_value(comment.get('time', '')) or 'Unknown',
                     'comment': text[:1000]
                 })
-                if max_comments and len(all_comments) >= max_comments: return all_comments
-        except Exception as e: print(f"Scraper Method 1 failed: {e}")
+                count += 1
+                if count % 200 == 0: yield {'log': f'[NETWORK] Downloaded {count} comments...'}
+                if max_comments and count >= max_comments: break
+            
+            yield {'log': f'[SUCCESS] Fetched {len(all_comments)} comments.'}
+            yield {'result': all_comments}
+            return
+        except Exception as e: 
+            yield {'log': f'[ERROR] Downloader failed: {e}'}
 
     if not all_comments or len(all_comments) < 10:
         try:
+            yield {'log': '[SYSTEM] Falling back to robust yt-dlp extraction...'}
             opts = {'skip_download': True, 'quiet': True, 'getcomments': True, 'extractor_args': {'youtube': {'max_comments': ['all','all','all','all']}}}
             if os.path.exists(COOKIES_FILE): opts['cookiefile'] = COOKIES_FILE
             with yt_dlp.YoutubeDL(opts) as ydl:
+                yield {'log': '[NETWORK] Extracting video metadata and executing JS logic...'}
                 info = ydl.extract_info(video_url, download=False)
                 if info and 'comments' in info:
-                    for c in info['comments']:
+                    for i, c in enumerate(info['comments']):
                         text = c.get('text', '').strip()
                         if not text: continue
                         all_comments.append({
@@ -126,11 +141,16 @@ def get_comments_scraper(video_url, max_comments=None, sort_mode='popular'):
                             'date': get_comment_date(c) or (parse_comment_date_value(c['timestamp']) if 'timestamp' in c else 'Unknown'),
                             'comment': text[:1000]
                         })
+                        if (i+1) % 200 == 0: yield {'log': f'[NETWORK] Downloaded {i+1} comments...'}
                         if max_comments and len(all_comments) >= max_comments: break
-        except Exception as e: print(f"Scraper Method 2 failed: {e}")
-    return all_comments
+            yield {'log': f'[SUCCESS] Fetched {len(all_comments)} comments via yt-dlp.'}
+        except Exception as e: 
+            yield {'log': f'[ERROR] Fallback failed: {e}'}
+            
+    yield {'result': all_comments}
 
-def get_comments_api(video_id, max_comments, access_token, sort_mode='popular'):
+def get_comments_api_gen(video_id, max_comments, access_token, sort_mode='popular'):
+    yield {'log': '[SYSTEM] Initializing Official YouTube Data API v3...'}
     url = 'https://www.googleapis.com/youtube/v3/commentThreads'
     headers = {'Authorization': f'Bearer {access_token}'}
     api_order = 'time' if sort_mode == 'recent' else 'relevance'
@@ -138,12 +158,15 @@ def get_comments_api(video_id, max_comments, access_token, sort_mode='popular'):
     params = {'part': 'snippet,replies', 'videoId': video_id, 'maxResults': 100, 'textFormat': 'plainText', 'order': api_order}
     comments = []
     
+    yield {'log': '[INFO] Authenticated with Google successfully.'}
+    yield {'log': f'[NETWORK] Fetching {sort_mode} comments using API quotas...'}
+    
     while True:
         res = requests.get(url, headers=headers, params=params)
         if not res.ok:
-            if res.status_code == 401: raise Exception("UNAUTHORIZED")
-            if res.status_code == 403: raise Exception(f"API Quota Exceeded or Forbidden: {res.json().get('error', {}).get('message', res.text)}")
-            raise Exception(f"YouTube API Error: {res.text}")
+            if res.status_code == 401: yield {'error': 'UNAUTHORIZED', 'log': '[ERROR] Session expired. Please sign in again.'}; return
+            if res.status_code == 403: yield {'error': 'QUOTA', 'log': f'[ERROR] API Quota Exceeded or Forbidden: {res.json().get("error", {}).get("message", res.text)}'}; return
+            yield {'error': 'API_ERROR', 'log': f'[ERROR] YouTube API Error: {res.text}'}; return
         
         data = res.json()
         for item in data.get('items', []):
@@ -161,11 +184,17 @@ def get_comments_api(video_id, max_comments, access_token, sort_mode='popular'):
                         'date': parse_comment_date_value(r_snip.get('publishedAt')) or 'Unknown',
                         'comment': r_snip.get('textDisplay', '')[:1000]
                     })
-            if max_comments and len(comments) >= max_comments: return comments[:max_comments]
+            if max_comments and len(comments) >= max_comments: break
             
+        yield {'log': f'[NETWORK] Fetched {len(comments)} comments via API so far...'}
+        
+        if max_comments and len(comments) >= max_comments: break
+        
         if 'nextPageToken' in data: params['pageToken'] = data['nextPageToken']
         else: break
-    return comments
+        
+    yield {'log': f'[SUCCESS] Finished fetching {len(comments)} comments.'}
+    yield {'result': comments}
 
 # ================== ROUTES ==================
 
@@ -229,54 +258,85 @@ def handle_cookies():
 
 @app.route('/api/extract', methods=['POST'])
 def extract():
-    try:
-        data = request.get_json()
-        video_url = data.get('url', '').strip()
-        method = data.get('method', 'scraper')
-        sort_mode = data.get('sort_mode', 'popular')
-        num_comments = data.get('num_comments', 100)
-        selection_mode = data.get('selection_mode', 'random')
-        
-        if not video_url: return jsonify({'error': 'Provide a valid URL'}), 400
-        video_id = extract_video_id(video_url)
-        if not video_id: return jsonify({'error': 'Invalid YouTube URL'}), 400
+    data = request.get_json()
+    
+    def generate():
+        try:
+            video_url = data.get('url', '').strip()
+            method = data.get('method', 'scraper')
+            sort_mode = data.get('sort_mode', 'popular')
+            num_comments = data.get('num_comments', 100)
+            selection_mode = data.get('selection_mode', 'random')
+            
+            if not video_url:
+                yield json.dumps({'error': 'Provide a valid URL'}) + '\n'
+                return
+                
+            video_id = extract_video_id(video_url)
+            if not video_id:
+                yield json.dumps({'error': 'Invalid YouTube URL'}) + '\n'
+                return
 
-        num_comments = None if str(num_comments).lower() == 'all' else max(1, min(int(num_comments), 10000))
-        
-        # FIXED: Deep pool logic for true randomness
-        if selection_mode == 'random':
-            # We want to fetch a massive pool of comments before randomizing to avoid bias
-            # Capped at 5000 to balance true randomness with server timeout times.
-            pool_size = 5000
-        else:
-            # Ordered requires only exactly what they asked for
-            pool_size = num_comments if num_comments else None
+            yield json.dumps({'log': f'[SYSTEM] Booting extraction task for Video ID: {video_id}'}) + '\n'
 
-        if method == 'api':
-            if 'google_token' not in session: return jsonify({'error': 'Not logged in with Google.'}), 401
-            try:
-                all_comments = get_comments_api(video_id, max_comments=pool_size, access_token=session['google_token'], sort_mode=sort_mode)
-            except Exception as e:
-                if "UNAUTHORIZED" in str(e):
-                    session.pop('google_token', None)
-                    return jsonify({'error': 'Session expired. Please sign in again.'}), 401
-                raise e
-        else:
-            all_comments = get_comments_scraper(video_url, max_comments=pool_size, sort_mode=sort_mode)
-
-        if not all_comments:
-            return jsonify({'error': 'No comments found. Try using the other method or check permissions.'}), 404
-
-        if selection_mode == 'ordered':
-            selected = all_comments[:num_comments] if num_comments else all_comments
-        else:
-            if num_comments and len(all_comments) > num_comments: selected = random.sample(all_comments, num_comments)
+            num_comments = None if str(num_comments).lower() == 'all' else max(1, min(int(num_comments), 10000))
+            
+            if selection_mode == 'random':
+                pool_size = 5000
+                yield json.dumps({'log': '[INFO] Deep Scan Mode engaged. Fetching massive pool for true randomness...'}) + '\n'
             else:
-                random.shuffle(all_comments)
-                selected = all_comments
+                pool_size = num_comments if num_comments else None
 
-        return jsonify({'success': True, 'comments': selected, 'count': len(selected), 'total_available': len(all_comments), 'pool_size_fetched': len(all_comments)})
-    except Exception as e: return jsonify({'error': f'Server error: {str(e)}'}), 500
+            all_comments = []
+            if method == 'api':
+                if 'google_token' not in session:
+                    yield json.dumps({'error': 'You must Sign in with Google (in Settings) to use the API method.'}) + '\n'
+                    return
+                for chunk in get_comments_api_gen(video_id, max_comments=pool_size, access_token=session['google_token'], sort_mode=sort_mode):
+                    if 'log' in chunk: yield json.dumps({'log': chunk['log']}) + '\n'
+                    if 'error' in chunk:
+                        yield json.dumps({'error': chunk['error']}) + '\n'
+                        if chunk['error'] == 'UNAUTHORIZED': session.pop('google_token', None)
+                        return
+                    if 'result' in chunk: all_comments = chunk['result']
+            else:
+                for chunk in get_comments_scraper_gen(video_url, max_comments=pool_size, sort_mode=sort_mode):
+                    if 'log' in chunk: yield json.dumps({'log': chunk['log']}) + '\n'
+                    if 'error' in chunk: 
+                        yield json.dumps({'error': chunk['error']}) + '\n'
+                        return
+                    if 'result' in chunk: all_comments = chunk['result']
+
+            if not all_comments:
+                yield json.dumps({'error': 'No comments found. Try using the other method or check permissions.'}) + '\n'
+                return
+
+            yield json.dumps({'log': f'[SYSTEM] Filtering and sanitizing dataset...'}) + '\n'
+
+            if selection_mode == 'ordered':
+                selected = all_comments[:num_comments] if num_comments else all_comments
+            else:
+                if num_comments and len(all_comments) > num_comments: 
+                    selected = random.sample(all_comments, num_comments)
+                    yield json.dumps({'log': f'[INFO] Sampled {num_comments} true random comments from deep pool.'}) + '\n'
+                else:
+                    random.shuffle(all_comments)
+                    selected = all_comments
+
+            yield json.dumps({'log': '[SUCCESS] Extraction Pipeline Complete.'}) + '\n'
+            yield json.dumps({
+                'success': True, 
+                'comments': selected, 
+                'count': len(selected), 
+                'total_available': len(all_comments), 
+                'pool_size_fetched': len(all_comments),
+                'selection_mode': selection_mode
+            }) + '\n'
+
+        except Exception as e: 
+            yield json.dumps({'error': f'Server error: {str(e)}'}) + '\n'
+
+    return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
 
 @app.route('/api/download', methods=['POST'])
 def download():

@@ -635,3 +635,43 @@ body.theme-dark .error-message {
         max-width: 95%;
     }
 }
+
+/* Terminal Window */
+.console-window {
+    background: #1e1e1e;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 20px 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    font-family: 'Courier New', Courier, monospace;
+}
+.console-header {
+    background: #333;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+}
+.console-dot {
+    width: 12px; height: 12px; border-radius: 50%; margin-right: 8px;
+}
+.console-dot.red { background: #ff5f56; }
+.console-dot.yellow { background: #ffbd2e; }
+.console-dot.green { background: #27c93f; }
+.console-title {
+    color: #aaa; margin-left: auto; margin-right: auto; font-size: 0.9em; letter-spacing: 1px;
+}
+.console-body {
+    padding: 15px;
+    color: #e0e0e0;
+    height: 250px;
+    overflow-y: auto;
+    font-size: 0.9em;
+    line-height: 1.6;
+    background: #121212;
+}
+.log-line { margin-bottom: 4px; word-wrap: break-word; }
+.log-error { color: #ff5f56; }
+.log-info { color: #5bc0de; }
+.log-success { color: #27c93f; }
+.log-system { color: #f8c555; }
+.log-network { color: #c678dd; }

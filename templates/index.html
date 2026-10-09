@@ -51,10 +51,15 @@
             </div>
         </div>
 
-        <!-- Loading Spinner -->
-        <div id="loadingSpinner" class="loading-spinner" style="display: none;">
-            <div class="spinner"></div>
-            <p id="loadingText">Extracting comments... This may take a moment.</p>
+        <!-- Terminal Console Window -->
+        <div id="consoleWindow" class="console-window" style="display: none; margin-left: 20px; margin-right: 20px;">
+            <div class="console-header">
+                <span class="console-dot red"></span>
+                <span class="console-dot yellow"></span>
+                <span class="console-dot green"></span>
+                <span class="console-title">Extraction Terminal</span>
+            </div>
+            <div class="console-body" id="consoleOutput"></div>
         </div>
 
         <!-- Error Message -->

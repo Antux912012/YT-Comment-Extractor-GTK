@@ -9,11 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectionMode = document.getElementById('selectionMode');
     
     // UI Elements
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    const loadingText = document.getElementById('loadingText');
     const errorMessage = document.getElementById('errorMessage');
     const resultsSection = document.getElementById('resultsSection');
     const commentsList = document.getElementById('commentsList');
+
+    // Terminal Console Elements
+    const consoleWindow = document.getElementById('consoleWindow');
+    const consoleOutput = document.getElementById('consoleOutput');
 
     // Settings Modal Elements
     const settingsBtn = document.getElementById('settingsBtn');
@@ -28,13 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Check statuses on load
     function updateStatuses() {
-        // Check Cookies
         fetch('/api/settings/cookies').then(r => r.json()).then(d => {
             const cs = document.getElementById('cookiesStatus');
             if (d.has_cookies) { cs.textContent = '✅ Cookies saved and active'; cs.style.color = 'green'; }
             else { cs.textContent = '❌ No cookies saved'; cs.style.color = 'red'; }
         });
-        // Check API Auth
         fetch('/api/auth/status').then(r => r.json()).then(d => {
             if (!d.configured) {
                 apiStatusBox.innerHTML = '<p style="color:red;font-weight:bold;">❌ API Not Configured</p><p style="font-size:0.85em;">The server host must set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables to use this feature.</p>';
@@ -70,6 +70,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (await fetch('/api/settings/cookies', { method: 'DELETE' }).then(r=>r.ok)) { alert('Cleared'); updateStatuses(); }
     });
 
+    function appendLog(text) {
+        const div = document.createElement('div');
+        div.className = 'log-line';
+        if (text.includes('[ERROR]')) div.classList.add('log-error');
+        else if (text.includes('[SUCCESS]')) div.classList.add('log-success');
+        else if (text.includes('[INFO]')) div.classList.add('log-info');
+        else if (text.includes('[SYSTEM]')) div.classList.add('log-system');
+        else if (text.includes('[NETWORK]')) div.classList.add('log-network');
+        
+        const timestamp = new Date().toLocaleTimeString();
+        div.textContent = `[${timestamp}] ${text}`;
+        consoleOutput.appendChild(div);
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
     // Extract Comments
     searchBtn.addEventListener('click', async () => {
         const url = videoUrl.value.trim();
@@ -78,12 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
         hideError();
         resultsSection.style.display = 'none';
         
-        if (selectionMode.value === 'random') {
-            loadingText.textContent = "Performing Deep Scan for true randomness... This may take up to 10 seconds.";
-        } else {
-            loadingText.textContent = "Extracting comments... This may take a moment.";
-        }
-        loadingSpinner.style.display = 'block';
+        consoleOutput.innerHTML = '';
+        consoleWindow.style.display = 'block';
+        searchBtn.disabled = true;
 
         try {
             const response = await fetch('/api/extract', {
@@ -97,17 +109,43 @@ document.addEventListener('DOMContentLoaded', () => {
                     selection_mode: selectionMode.value
                 })
             });
-            const data = await response.json();
-            if (!response.ok) {
-                if (response.status === 401 && extractMethod.value === 'api') {
-                    throw new Error('You must Sign in with Google (in Settings) to use the API method.');
+            
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            while (true) {
+                const {value, done} = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n').filter(l => l.trim());
+                
+                for (let line of lines) {
+                    try {
+                        const data = JSON.parse(line);
+                        if (data.log) {
+                            appendLog(data.log);
+                        }
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        if (data.success) {
+                            currentComments = data.comments;
+                            displayResults(data);
+                        }
+                    } catch (e) {
+                        if (e.message !== "Unexpected end of JSON input" && !e.message.startsWith("Unexpected token")) {
+                            throw e;
+                        }
+                    }
                 }
-                throw new Error(data.error || 'Failed to extract comments');
             }
-            currentComments = data.comments;
-            displayResults(data);
-        } catch (error) { showError(error.message); } 
-        finally { loadingSpinner.style.display = 'none'; }
+        } catch (error) { 
+            appendLog(`[ERROR] ${error.message}`);
+            showError(error.message); 
+        } finally {
+            searchBtn.disabled = false;
+        }
     });
 
     function displayResults(data) {
