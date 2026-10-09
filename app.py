@@ -11,11 +11,6 @@ import requests
 from datetime import datetime, timedelta
 import webview
 
-app = Flask(__name__)
-app.secret_key = get_secret_key()
-
-
-
 import configparser
 from pathlib import Path
 import os
@@ -60,6 +55,12 @@ def get_oauth_creds():
     return None, None
 
 GOOGLE_REDIRECT_URI = "http://localhost:5000/api/auth/callback"
+
+app = Flask(__name__)
+app.secret_key = get_secret_key()
+
+
+
 
 
 
