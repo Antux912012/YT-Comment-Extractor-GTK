@@ -13,6 +13,7 @@
             <h1>YouTube Comments Extractor</h1>
             <p class="subtitle">Extract random comments or download all comments from any YouTube video</p>
             <button id="themeToggle" class="theme-toggle-button" type="button">Switch to dark mode</button>
+            <button id="settingsBtn" class="theme-toggle-button" style="margin-left: 10px;" type="button">⚙️ Settings (Cookies)</button>
         </div>
 
         <!-- Search Box -->
@@ -92,7 +93,45 @@
                 <li>Paste it in the search box above</li>
                 <li>Click "Extract Comments"</li>
                 <li>Download the CSV or copy the data</li>
+                <li>If the video is restricted, click "Settings (Cookies)", paste a Netscape format cookies file content, save it, and try again.</li>
             </ol>
+        </div>
+    </div>
+
+    <!-- JSON View Modal -->
+    <div id="jsonModal" class="json-modal">
+        <div class="json-modal-content">
+            <div class="json-modal-header">
+                <h3>JSON Data</h3>
+                <button id="jsonModalClose" class="json-modal-close">&times;</button>
+            </div>
+            <div class="json-modal-body">
+                <pre id="jsonContent"></pre>
+            </div>
+            <div class="json-modal-footer">
+                <button id="copyJsonBtn" class="btn btn-copy-json">Copy JSON</button>
+                <button id="jsonModalCloseBtn" class="btn json-modal-close-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="json-modal">
+        <div class="json-modal-content">
+            <div class="json-modal-header">
+                <h3>Settings</h3>
+                <button id="settingsModalClose" class="json-modal-close">&times;</button>
+            </div>
+            <div class="json-modal-body">
+                <p>Paste the contents of your exported cookies.txt file here (Netscape format) to bypass age/login restrictions:</p>
+                <textarea id="cookiesInput" style="width: 100%; height: 200px; margin-top: 10px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; padding: 10px;"></textarea>
+                <p id="cookiesStatus" style="margin-top: 10px; font-weight: bold;"></p>
+            </div>
+            <div class="json-modal-footer">
+                <button id="saveCookiesBtn" class="btn btn-download">Save Cookies</button>
+                <button id="clearCookiesBtn" class="btn btn-copy-json">Clear Cookies</button>
+                <button id="settingsModalCloseBtn" class="btn json-modal-close-btn">Close</button>
+            </div>
         </div>
     </div>
 

@@ -1,360 +1,281 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const urlInput = document.getElementById('videoUrl');
-    const numCommentsSelect = document.getElementById('numComments');
-    const selectionModeSelect = document.getElementById('selectionMode');
+let currentComments = [];
+
+document.addEventListener('DOMContentLoaded', () => {
     const searchBtn = document.getElementById('searchBtn');
+    const videoUrl = document.getElementById('videoUrl');
+    const numComments = document.getElementById('numComments');
+    const selectionMode = document.getElementById('selectionMode');
+    const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+    const downloadJsonBtn = document.getElementById('downloadJsonBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const viewJsonBtn = document.getElementById('viewJsonBtn');
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const settingsBtn = document.getElementById('settingsBtn');
+    
+    // UI Elements
     const loadingSpinner = document.getElementById('loadingSpinner');
     const errorMessage = document.getElementById('errorMessage');
     const resultsSection = document.getElementById('resultsSection');
-    const downloadCsvBtn = document.getElementById('downloadCsvBtn');
-    const downloadJsonBtn = document.getElementById('downloadJsonBtn');
-    const viewJsonBtn = document.getElementById('viewJsonBtn');
-    const copyBtn = document.getElementById('copyBtn');
-    const commentsList = document.getElementById('commentsList');
     const commentCount = document.getElementById('commentCount');
     const totalCount = document.getElementById('totalCount');
     const selectionInfo = document.getElementById('selectionInfo');
+    const commentsList = document.getElementById('commentsList');
 
-    let currentComments = [];
-    let totalAvailable = 0;
-    let currentSelectionMode = 'random';
-    const themeToggle = document.getElementById('themeToggle');
+    // JSON Modal Elements
+    const jsonModal = document.getElementById('jsonModal');
+    const jsonModalClose = document.getElementById('jsonModalClose');
+    const jsonModalCloseBtn = document.getElementById('jsonModalCloseBtn');
+    const jsonContent = document.getElementById('jsonContent');
+    const copyJsonBtn = document.getElementById('copyJsonBtn');
 
-    if (themeToggle) {
-        initTheme();
+    // Settings Modal Elements
+    const settingsModal = document.getElementById('settingsModal');
+    const settingsModalClose = document.getElementById('settingsModalClose');
+    const settingsModalCloseBtn = document.getElementById('settingsModalCloseBtn');
+    const saveCookiesBtn = document.getElementById('saveCookiesBtn');
+    const clearCookiesBtn = document.getElementById('clearCookiesBtn');
+    const cookiesInput = document.getElementById('cookiesInput');
+    const cookiesStatus = document.getElementById('cookiesStatus');
+
+    // Theme Toggle
+    themeToggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('theme-dark');
+        const isDark = document.body.classList.contains('theme-dark');
+        themeToggleBtn.textContent = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+
+    if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('theme-dark');
+        themeToggleBtn.textContent = 'Switch to light mode';
     }
 
-    // Handle Enter key in input
-    urlInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            searchBtn.click();
+    // Check cookies status on load
+    checkCookiesStatus();
+
+    function checkCookiesStatus() {
+        fetch('/api/settings/cookies')
+            .then(res => res.json())
+            .then(data => {
+                if (data.has_cookies) {
+                    cookiesStatus.textContent = 'Status: Cookies are currently saved and active.';
+                    cookiesStatus.style.color = '#10b981';
+                } else {
+                    cookiesStatus.textContent = 'Status: No cookies saved.';
+                    cookiesStatus.style.color = '#ef4444';
+                }
+            });
+    }
+
+    // Settings Modal functionality
+    settingsBtn.addEventListener('click', () => {
+        settingsModal.classList.add('active');
+        checkCookiesStatus();
+    });
+    
+    const closeSettings = () => settingsModal.classList.remove('active');
+    settingsModalClose.addEventListener('click', closeSettings);
+    settingsModalCloseBtn.addEventListener('click', closeSettings);
+
+    saveCookiesBtn.addEventListener('click', async () => {
+        const cookies = cookiesInput.value.trim();
+        if (!cookies) return alert('Please enter cookies data first.');
+        
+        try {
+            const res = await fetch('/api/settings/cookies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cookies })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message);
+                cookiesInput.value = '';
+                checkCookiesStatus();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (e) {
+            alert('Failed to save cookies.');
         }
     });
 
-    // Search button click
-    searchBtn.addEventListener('click', async function() {
-        const videoUrl = urlInput.value.trim();
-        const numComments = numCommentsSelect.value;
-        const selectionMode = selectionModeSelect.value;
+    clearCookiesBtn.addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/settings/cookies', { method: 'DELETE' });
+            if (res.ok) {
+                alert('Cookies cleared.');
+                checkCookiesStatus();
+            }
+        } catch (e) {
+            alert('Failed to clear cookies.');
+        }
+    });
 
-        if (!videoUrl) {
+    // Extract Comments
+    searchBtn.addEventListener('click', async () => {
+        const url = videoUrl.value.trim();
+        if (!url) {
             showError('Please enter a YouTube video URL');
             return;
         }
 
-        if (!isValidYoutubeUrl(videoUrl)) {
-            showError('Please enter a valid YouTube URL');
-            return;
-        }
-
-        await extractComments(videoUrl, numComments, selectionMode);
-    });
-
-    // CSV Download button click
-    downloadCsvBtn.addEventListener('click', function() {
-        if (currentComments.length === 0) {
-            showError('No comments to download');
-            return;
-        }
-        downloadCSV(currentComments);
-    });
-
-    // JSON Download button click
-    downloadJsonBtn.addEventListener('click', function() {
-        if (currentComments.length === 0) {
-            showError('No comments to download');
-            return;
-        }
-        downloadJSON(currentComments);
-    });
-
-    // JSON View button click
-    viewJsonBtn.addEventListener('click', function() {
-        if (currentComments.length === 0) {
-            showError('No comments to view');
-            return;
-        }
-        showJsonModal(currentComments);
-    });
-
-    // Copy button click
-    copyBtn.addEventListener('click', function() {
-        if (currentComments.length === 0) {
-            showError('No comments to copy');
-            return;
-        }
-
-        copyToClipboard(currentComments);
-    });
-
-    function isValidYoutubeUrl(url) {
-        const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)\//;
-        return youtubeRegex.test(url);
-    }
-
-    function initTheme() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        applyTheme(savedTheme);
-
-        themeToggle.addEventListener('click', () => {
-            const nextTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
-            applyTheme(nextTheme);
-        });
-    }
-
-    function applyTheme(theme) {
-        if (theme === 'dark') {
-            document.body.classList.add('theme-dark');
-            themeToggle.textContent = 'Switch to light mode';
-        } else {
-            document.body.classList.remove('theme-dark');
-            themeToggle.textContent = 'Switch to dark mode';
-        }
-        localStorage.setItem('theme', theme);
-    }
-
-    function showError(message) {
-        errorMessage.textContent = message;
-        errorMessage.style.display = 'block';
-        errorMessage.classList.add('error');
-        resultsSection.style.display = 'none';
-        loadingSpinner.style.display = 'none';
-    }
-
-    function hideError() {
-        errorMessage.style.display = 'none';
-        errorMessage.classList.remove('error');
-    }
-
-    async function extractComments(videoUrl, numComments, selectionMode) {
-        loadingSpinner.style.display = 'block';
-        resultsSection.style.display = 'none';
         hideError();
+        resultsSection.style.display = 'none';
+        loadingSpinner.style.display = 'block';
 
         try {
             const response = await fetch('/api/extract', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    url: videoUrl,
-                    num_comments: numComments,
-                    selection_mode: selectionMode
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: url,
+                    num_comments: numComments.value,
+                    selection_mode: selectionMode.value
                 })
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                showError(data.error || 'Error extracting comments');
-                loadingSpinner.style.display = 'none';
-                return;
+                throw new Error(data.error || 'Failed to extract comments');
             }
 
-            if (data.success) {
-                currentSelectionMode = selectionMode;
-                currentComments = data.comments;
-                displayComments(data.comments, data.total_available);
-                resultsSection.style.display = 'block';
-                hideError();
-            } else {
-                showError(data.error || 'Error extracting comments');
-            }
+            currentComments = data.comments;
+            displayResults(data);
+
         } catch (error) {
-            console.error('Error:', error);
-            showError('Error connecting to server. Make sure the server is running.');
+            showError(error.message);
         } finally {
             loadingSpinner.style.display = 'none';
         }
-    }
+    });
 
-    function displayComments(comments, total) {
-        currentComments = comments;
-        totalAvailable = total || comments.length;
+    function displayResults(data) {
+        commentCount.textContent = data.count;
+        totalCount.textContent = data.total_available;
         
-        commentCount.textContent = comments.length;
-        totalCount.textContent = totalAvailable;
+        let infoText = `Showing ${data.count} `;
+        infoText += data.selection_mode === 'random' ? 'randomly selected' : 'ordered';
+        infoText += ' comments';
         
-        // Calculate and display selection info
-        const percentage = totalAvailable > 0 ? ((comments.length / totalAvailable) * 100).toFixed(1) : 100;
-        const modeText = currentSelectionMode === 'ordered' ? 'Ordered' : 'Random';
-        const selectedInfo = `Mode: ${modeText} | Selected: ${comments.length} out of ${totalAvailable} total comments (${percentage}%)`;
-        selectionInfo.textContent = selectedInfo;
+        if (data.total_available > 0) {
+            const percentage = ((data.count / data.total_available) * 100).toFixed(1);
+            infoText += ` (${percentage}% of total available)`;
+        }
         
+        selectionInfo.textContent = infoText;
         commentsList.innerHTML = '';
-
-        comments.forEach((comment, index) => {
-            const row = document.createElement('tr');
+        
+        data.comments.forEach(comment => {
+            const tr = document.createElement('tr');
             
-            // Truncate comment for display
-            const truncatedComment = comment.comment.substring(0, 150) + 
-                                    (comment.comment.length > 150 ? '...' : '');
-            const commentDate = comment.date ? escapeHtml(comment.date) : '-';
+            const tdNick = document.createElement('td');
+            tdNick.textContent = comment.nickname || 'Anonymous';
             
-            row.innerHTML = `
-                <td>${escapeHtml(comment.nickname)}</td>
-                <td>${commentDate}</td>
-                <td title="${escapeHtml(comment.comment)}">
-                    <span class="comment-text">${escapeHtml(truncatedComment)}</span>
-                </td>
-            `;
-            commentsList.appendChild(row);
+            const tdDate = document.createElement('td');
+            tdDate.textContent = comment.date || 'Unknown';
+            
+            const tdComment = document.createElement('td');
+            const commentSpan = document.createElement('span');
+            commentSpan.className = 'comment-text';
+            commentSpan.textContent = comment.comment || '';
+            commentSpan.title = comment.comment || ''; 
+            tdComment.appendChild(commentSpan);
+            
+            tr.appendChild(tdNick);
+            tr.appendChild(tdDate);
+            tr.appendChild(tdComment);
+            commentsList.appendChild(tr);
         });
+
+        resultsSection.style.display = 'block';
     }
 
-    function downloadCSV(comments) {
-        let csvContent = 'Nickname|Date|Comment\n';
+    // CSV Download
+    downloadCsvBtn.addEventListener('click', async () => {
+        if (!currentComments.length) return;
+        try {
+            const response = await fetch('/api/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ comments: currentComments })
+            });
+            if (!response.ok) throw new Error('Download failed');
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `youtube_comments_${new Date().toISOString().slice(0,19).replace(/[:-]/g, '')}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            showError('Failed to download CSV: ' + error.message);
+        }
+    });
 
-        comments.forEach(comment => {
-            const nickname = escapeCSV(comment.nickname);
-            const date = escapeCSV(comment.date || '');
-            const text = escapeCSV(comment.comment);
+    // JSON Download
+    downloadJsonBtn.addEventListener('click', () => {
+        if (!currentComments.length) return;
+        const dataStr = JSON.stringify(currentComments, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `youtube_comments_${new Date().toISOString().slice(0,19).replace(/[:-]/g, '')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    });
 
-            csvContent += `${nickname}|${date}|${text}\n`;
-        });
-
-        // Create blob and download
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-
-        link.setAttribute('href', url);
-        link.setAttribute('download', `youtube_comments_${getTimestamp()}.csv`);
-        link.style.visibility = 'hidden';
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    function downloadJSON(comments) {
-        const jsonData = {
-            metadata: {
-                extracted_at: new Date().toISOString(),
-                total_comments: comments.length,
-                export_format: 'JSON'
-            },
-            comments: comments
-        };
-
-        const jsonContent = JSON.stringify(jsonData, null, 2);
-        const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-
-        link.setAttribute('href', url);
-        link.setAttribute('download', `youtube_comments_${getTimestamp()}.json`);
-        link.style.visibility = 'hidden';
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    function showJsonModal(comments) {
-        const jsonData = {
-            metadata: {
-                extracted_at: new Date().toISOString(),
-                total_comments: comments.length
-            },
-            comments: comments
-        };
-
-        const jsonContent = JSON.stringify(jsonData, null, 2);
-        const modal = document.createElement('div');
-        modal.className = 'json-modal';
-        modal.innerHTML = `
-            <div class="json-modal-content">
-                <div class="json-modal-header">
-                    <h3>JSON Preview</h3>
-                    <button class="json-modal-close">&times;</button>
-                </div>
-                <div class="json-modal-body">
-                    <pre><code>${escapeHtml(jsonContent)}</code></pre>
-                </div>
-                <div class="json-modal-footer">
-                    <button class="btn btn-copy-json">Copy JSON</button>
-                    <button class="json-modal-close-btn">Close</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-        modal.classList.add('active');
-
-        const closeBtn = modal.querySelector('.json-modal-close');
-        const closeBtnFooter = modal.querySelector('.json-modal-close-btn');
-        const copyJsonBtn = modal.querySelector('.btn-copy-json');
-
-        closeBtn.addEventListener('click', () => modal.remove());
-        closeBtnFooter.addEventListener('click', () => modal.remove());
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-
-        copyJsonBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(jsonContent);
-            copyJsonBtn.textContent = '✓ Copied!';
-            setTimeout(() => {
-                copyJsonBtn.textContent = 'Copy JSON';
-            }, 2000);
-        });
-    }
-
-    function copyToClipboard(comments) {
-        let csvContent = 'Nickname|Date|Comment\n';
-
-        comments.forEach(comment => {
-            const nickname = escapeCSV(comment.nickname);
-            const date = escapeCSV(comment.date || '');
-            const text = escapeCSV(comment.comment);
-            csvContent += `${nickname}|${date}|${text}\n`;
-        });
-
-        navigator.clipboard.writeText(csvContent).then(() => {
-            // Show success message
+    // Copy to Clipboard
+    copyBtn.addEventListener('click', () => {
+        if (!currentComments.length) return;
+        const text = currentComments.map(c => `Nickname: ${c.nickname}\nDate: ${c.date}\nComment: ${c.comment}\n---`).join('\n\n');
+        navigator.clipboard.writeText(text).then(() => {
             const originalText = copyBtn.textContent;
-            copyBtn.textContent = '✓ Copied!';
-            copyBtn.style.background = '#28a745';
-            copyBtn.style.color = 'white';
-
-            setTimeout(() => {
-                copyBtn.textContent = originalText;
-                copyBtn.style.background = '';
-                copyBtn.style.color = '';
-            }, 2000);
+            copyBtn.textContent = '✅ Copied!';
+            setTimeout(() => copyBtn.textContent = originalText, 2000);
         }).catch(err => {
             showError('Failed to copy to clipboard');
-            console.error('Error:', err);
         });
+    });
+
+    // View JSON Modal
+    viewJsonBtn.addEventListener('click', () => {
+        if (!currentComments.length) return;
+        jsonContent.textContent = JSON.stringify(currentComments, null, 2);
+        jsonModal.classList.add('active');
+    });
+
+    const closeJsonModal = () => jsonModal.classList.remove('active');
+    jsonModalClose.addEventListener('click', closeJsonModal);
+    jsonModalCloseBtn.addEventListener('click', closeJsonModal);
+
+    copyJsonBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(jsonContent.textContent).then(() => {
+            const originalText = copyJsonBtn.textContent;
+            copyJsonBtn.textContent = '✅ Copied!';
+            setTimeout(() => copyJsonBtn.textContent = originalText, 2000);
+        });
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === jsonModal) closeJsonModal();
+        if (e.target === settingsModal) closeSettings();
+    });
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        resultsSection.style.display = 'none';
     }
 
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    function escapeCSV(text) {
-        if (!text) return '';
-        // Escape quotes and wrap in quotes if contains special chars
-        text = text.replace(/"/g, '""');
-        if (text.includes('|') || text.includes('\n') || text.includes('"')) {
-            text = `"${text}"`;
-        }
-        return text;
-    }
-
-    function getTimestamp() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        return `${year}${month}${day}_${hours}${minutes}`;
+    function hideError() {
+        errorMessage.style.display = 'none';
+        errorMessage.textContent = '';
     }
 });
