@@ -1,0 +1,4 @@
+#!/bin/bash
+export PYTHONPATH="/app/lib/python3.12/site-packages:/app/lib/python3.11/site-packages:$PYTHONPATH"
+cd /app/share/yt-extractor
+python3 main_gtk.py

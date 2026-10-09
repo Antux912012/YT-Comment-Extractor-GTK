@@ -1,16 +1,10 @@
-from flask import Flask, render_template, request, jsonify, send_file, Response, stream_with_context
 import yt_dlp
-import csv
-import io
-import random
 import os
 import re
-import json
-import threading
+import random
+import http.cookiejar
 from urllib.parse import urlparse, parse_qs
 from datetime import datetime, timedelta
-import http.cookiejar
-import webview
 
 try:
     from youtube_comment_downloader import YoutubeCommentDownloader
@@ -18,9 +12,6 @@ try:
 except ImportError:
     YOUTUBE_COMMENT_DOWNLOADER_AVAILABLE = False
     print("Warning: youtube_comment_downloader not available")
-
-app = Flask(__name__)
-app.secret_key = os.urandom(24)
 
 COOKIES_FILE = 'cookies.txt'
 
@@ -140,99 +131,3 @@ def get_comments_scraper_gen(video_url, max_comments=None, sort_mode='popular'):
             yield {'log': f'[ERROR] Fallback failed: {e}'}
             
     yield {'result': all_comments}
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/api/extract', methods=['POST'])
-def extract():
-    data = request.get_json()
-    
-    def generate():
-        try:
-            video_url = data.get('url', '').strip()
-            sort_mode = data.get('sort_mode', 'popular')
-            num_comments = data.get('num_comments', 100)
-            selection_mode = data.get('selection_mode', 'random')
-            
-            if not video_url:
-                yield json.dumps({'error': 'Provide a valid URL'}) + '\n'
-                return
-
-            yield json.dumps({'log': f'[SYSTEM] Booting extraction task for URL: {video_url}'}) + '\n'
-
-            num_comments = None if str(num_comments).lower() == 'all' else max(1, min(int(num_comments), 10000))
-            
-            if selection_mode == 'random':
-                pool_size = 5000
-                yield json.dumps({'log': '[INFO] Deep Scan Mode engaged. Fetching massive pool for true randomness...'}) + '\n'
-            else:
-                pool_size = num_comments if num_comments else None
-
-            all_comments = []
-            
-            for chunk in get_comments_scraper_gen(video_url, max_comments=pool_size, sort_mode=sort_mode):
-                if 'log' in chunk: yield json.dumps({'log': chunk['log']}) + '\n'
-                if 'error' in chunk:
-                    yield json.dumps({'error': chunk['error']}) + '\n'
-                    return
-                if 'result' in chunk: all_comments = chunk['result']
-
-            if not all_comments:
-                yield json.dumps({'error': 'No comments found. The video may have comments disabled or requires cookies.'}) + '\n'
-                return
-
-            yield json.dumps({'log': f'[SYSTEM] Filtering and sanitizing dataset...'}) + '\n'
-
-            if selection_mode == 'ordered':
-                selected = all_comments[:num_comments] if num_comments else all_comments
-            else:
-                if num_comments and len(all_comments) > num_comments: 
-                    selected = random.sample(all_comments, num_comments)
-                    yield json.dumps({'log': f'[INFO] Sampled {num_comments} true random comments from deep pool.'}) + '\n'
-                else:
-                    random.shuffle(all_comments)
-                    selected = all_comments
-
-            yield json.dumps({'log': '[SUCCESS] Extraction Pipeline Complete.'}) + '\n'
-            yield json.dumps({
-                'success': True, 
-                'comments': selected, 
-                'count': len(selected), 
-                'total_available': len(all_comments), 
-                'pool_size_fetched': len(all_comments),
-                'selection_mode': selection_mode
-            }) + '\n'
-
-        except Exception as e: 
-            yield json.dumps({'error': f'Server error: {str(e)}'}) + '\n'
-
-    return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
-
-@app.route('/api/download', methods=['POST'])
-def download():
-    comments = request.get_json().get('comments', [])
-    output = io.StringIO()
-    writer = csv.writer(output, delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    writer.writerow(['Nickname', 'Date', 'Comment'])
-    for c in comments: writer.writerow([c.get('nickname', ''), c.get('date', ''), c.get('comment', '')])
-    output.seek(0)
-    return send_file(io.BytesIO(output.getvalue().encode('utf-8')), mimetype='text/csv', as_attachment=True, download_name=f'yt_comments_{datetime.now().strftime("%Y%m%d%H%M%S")}.csv')
-
-def start_server():
-    app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)
-
-if __name__ == '__main__':
-    t = threading.Thread(target=start_server)
-    t.daemon = True
-    t.start()
-    
-    webview.create_window(
-        title='YouTube Comments Extractor', 
-        url='http://127.0.0.1:5000', 
-        width=1200, 
-        height=800,
-        min_size=(800, 600)
-    )
-    webview.start()

@@ -26,15 +26,8 @@ modules:
     buildsystem: simple
     build-commands:
       - mkdir -p /app/share/yt-extractor
-      - cp -r app.py templates/ /app/share/yt-extractor/
-      - mkdir -p /app/bin
-      - cat > /app/bin/start-yt-extractor << 'INNER_EOF'
-        #!/bin/bash
-        export PYTHONPATH="/app/lib/python3.11/site-packages:$PYTHONPATH"
-        cd /app/share/yt-extractor
-        python3 app.py
-        INNER_EOF
-      - chmod +x /app/bin/start-yt-extractor
+      - cp scraper.py main_gtk.py /app/share/yt-extractor/
+      - install -D start-yt-extractor /app/bin/start-yt-extractor
     sources:
       - type: dir
         path: .
