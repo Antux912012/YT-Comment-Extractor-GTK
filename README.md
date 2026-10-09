@@ -1,191 +1,57 @@
-# YouTube Comments Extractor
+# YouTube Comment Extractor
 
-A simple web application to extract random 100 comments from any YouTube video and export them as a CSV file with pipe delimiter (`|`).
+A native GTK4/Libadwaita application for Linux that allows users to extract comments from YouTube videos. The application leverages `yt-dlp` to bypass YouTube API restrictions and provides various sampling strategies for efficient data extraction.
 
 ## Features
 
-- 🎯 **Search Engine-like Interface**: Clean, intuitive design similar to Google search
-- 📝 **Easy Comment Extraction**: Just paste a YouTube video link
-- 📊 **CSV Export**: Download comments with columns: Nickname, Date, Comment, Has Replies (Y/N)
-- 📋 **Copy to Clipboard**: Copy extracted comments directly to clipboard
-- 🎲 **Random Selection**: Randomly selects 100 comments from available ones
-- 🔀 **Ordered Extraction Option**: Choose to extract comments in the order they appear on YouTube
-- 📱 **Responsive Design**: Works on desktop, tablet, and mobile devices
-
-## Project Structure
-
-```
-YT_Comments_Export_Random/
-├── app.py                 # Flask backend application
-├── requirements.txt       # Python dependencies
-├── templates/
-│   └── index.html        # HTML frontend
-└── static/
-    ├── style.css         # CSS styling
-    └── script.js         # JavaScript functionality
-```
+- **GTK4/Libadwaita UI**: Seamless integration with modern Linux desktops.
+- **`yt-dlp` Integration**: Directly parses comments, avoiding YouTube Data API quotas or keys.
+- **Advanced Sampling**: Support for uniform sampling, head-and-tail limits, and probabilistic sampling.
+- **Cookies Support**: Pass `cookies.txt` to access restricted content.
+- **CSV Export**: Extract results into a cleanly formatted CSV file.
 
 ## Installation
 
-### Prerequisites
-- Python 3.7 or higher
-- pip (Python package installer)
+### Flatpak (Recommended)
 
-### Setup
+1. Ensure Flatpak and `flatpak-builder` are installed on your system.
+2. Build and install the application locally using the provided manifest:
 
-1. **Clone or navigate to the project directory:**
-   ```bash
-   cd /path/to/YT_Comments_Export_Random
-   ```
+```bash
+flatpak-builder --user --install --force-clean build-dir io.github.antux912012.YTCommentExtractor.yml
+```
 
-2. **Create a virtual environment (optional but recommended):**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+3. Run the app:
+```bash
+flatpak run io.github.antux912012.YTCommentExtractor
+```
 
-3. **Install dependencies:**
+### Local Development
+
+To run the application locally without Flatpak:
+1. Ensure Python 3, `gtk4`, `libadwaita`, and `python3-gi` are installed.
+2. Install Python dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-
-## Running the Application
-
-### Local Python
-
-1. **Start the Flask server:**
+3. Run the app using the start script:
    ```bash
-   python app.py
+   ./start.sh
    ```
 
-2. **Open your browser:**
-   - Navigate to `http://localhost:5000`
+## Usage
 
-### Docker (recommended for OS-independent execution)
+1. Paste a YouTube Video URL.
+2. Select your sorting preference (Top comments or Newest first).
+3. Choose a sampling strategy (All comments, Head/Tail limits, Random uniform).
+4. Provide a `cookies.txt` if the video is age-restricted or private.
+5. Click **Extract Comments**.
+6. Review the logs and, once finished, click **Export to CSV**.
 
-1. **Build the Docker image:**
-   ```bash
-   docker build -t yt-comment-extractor .
-   ```
+## Version
 
-2. **Run the container:**
-   ```bash
-   docker run --rm -p 5000:5000 yt-comment-extractor
-   ```
-
-3. **Open your browser:**
-   - Navigate to `http://localhost:5000`
-
-### Docker Compose
-
-1. **Start the service:**
-   ```bash
-   docker compose up --build
-   ```
-
-2. **Open your browser from this machine:**
-   - Navigate to `http://localhost:5000`
-
-3. **Open from another device on the same local network:**
-   - Find the Docker host IP, then open `http://<HOST_IP>:5000`
-   - Example: `http://192.168.1.208:5000`
-
-4. **Stop the service:**
-   ```bash
-   docker compose down
-   ```
-
-> Note: Docker exposes port `5000` on the host, so the app is accessible from any device on the same LAN using the host IP.
-
-### Using the application
-
-- Copy a YouTube video link (e.g., `https://www.youtube.com/watch?v=dQw4w9WgXcQ`)
-- Paste it in the search box
-- Select the extraction mode: **Random comments** or **Ordered comments**
-- Click "Extract Comments"
-- View the results in the table below
-- Download as CSV or copy to clipboard
-
-## Supported YouTube URL Formats
-
-The application supports standard YouTube URLs:
-- `https://www.youtube.com/watch?v=VIDEO_ID`
-- `https://youtu.be/VIDEO_ID`
-- `https://youtube.com/watch?v=VIDEO_ID`
-- `https://www.youtube.com/watch?v=VIDEO_ID&t=123`
-
-## CSV Export Format
-
-The CSV file uses pipe (`|`) as delimiter with the following columns:
-
-```
-Nickname|Date|Comment|Has Replies
-User123|3 months ago|Great video!|Y
-User456|2 months ago|Thanks for sharing|N
-```
-
-## Features in Detail
-
-### Extract Comments
-- Connects to YouTube using yt-dlp library
-- Extracts available comments from the video
-- Randomly selects up to 100 comments
-- Displays results in an easy-to-read table
-
-### Download CSV
-- Creates a properly formatted CSV file with pipe delimiters
-- Filename includes timestamp: `youtube_comments_YYYYMMDD_HHMM.csv`
-- Opens download dialog automatically
-
-### Copy to Clipboard
-- Copies all comments in CSV format
-- Includes visual feedback (button changes to "✓ Copied!")
-- Ready to paste into spreadsheets or text editors
-
-## Limitations
-
-- Only extracts comments if the video has comments enabled
-- Some videos may have restricted comment access
-- Comment extraction speed depends on video's comment count and internet connection
-- YouTube may have rate limiting for large-scale extraction
-
-## Troubleshooting
-
-### "Could not extract comments" error
-- Check if the video has comments enabled
-- Try another video to verify the tool works
-- Ensure your internet connection is stable
-
-### Port already in use
-- Change the port in `app.py` (default is 5000)
-- Or stop other applications using port 5000
-
-### Dependencies installation fails
-- Make sure you're using Python 3.7+
-- Try upgrading pip: `pip install --upgrade pip`
-- Delete `requirements.txt` and reinstall specific packages
-
-## Dependencies
-
-- **Flask** - Web framework
-- **yt-dlp** - YouTube content downloader and extractor
-- **requests** - HTTP library (for yt-dlp)
+Current version: **0.1ac**
 
 ## License
 
-This project is provided as-is for educational and personal use.
-
-## Notes
-
-- Large comment extractions may take a few moments
-- Videos with disabled comments won't return any results
-- The application stores comments in memory during extraction
-- No data is stored on the server permanently
-
-## Support
-
-For issues or questions:
-1. Check the troubleshooting section above
-2. Verify all dependencies are installed correctly
-3. Try restarting the Flask server
-4. Check your internet connection
+This project is licensed under standard open-source terms.

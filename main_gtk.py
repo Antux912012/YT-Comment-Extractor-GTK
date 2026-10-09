@@ -52,7 +52,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
         self.settings = load_settings()
 
     def on_activate(self, app):
-        self.win = Adw.ApplicationWindow(application=app, title="YouTube Comment Extractor")
+        self.win = Adw.ApplicationWindow(application=app, title="YouTube Comment Extractor v0.1ac")
         self.win.set_default_size(840, 720)
 
         # Main Toast Overlay for GNOME-style notifications
