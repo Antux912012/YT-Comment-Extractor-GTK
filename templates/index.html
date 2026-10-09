@@ -20,36 +20,41 @@
 
         <!-- Search Box -->
         <div class="search-container">
-            <div class="search-box">
+            <div class="search-box" style="display: flex; flex-wrap: wrap; gap: 10px;">
                 <input 
                     type="text" 
                     id="videoUrl" 
                     class="search-input" 
                     placeholder="Paste YouTube video link here..."
                     autocomplete="off"
+                    style="flex: 1 1 100%;"
                 >
-                <select id="extractMethod" class="comments-select" style="background-color: #e2e8f0;">
+                <select id="extractMethod" class="comments-select" style="background-color: #e2e8f0; flex: 1;">
                     <option value="scraper" selected>🕵️ Method: Scraper (Cookies)</option>
                     <option value="api">🌐 Method: Official API (Login)</option>
                 </select>
-                <select id="numComments" class="comments-select">
+                <select id="sortMode" class="comments-select" style="flex: 1;">
+                    <option value="popular" selected>Sort: Top Popular</option>
+                    <option value="recent">Sort: Newest First</option>
+                </select>
+                <select id="numComments" class="comments-select" style="flex: 1;">
                     <option value="25">25 comments</option>
                     <option value="100" selected>100 comments</option>
                     <option value="300">300 comments</option>
                     <option value="all">All comments</option>
                 </select>
-                <select id="selectionMode" class="comments-select">
-                    <option value="random" selected>Random</option>
-                    <option value="ordered">Ordered</option>
+                <select id="selectionMode" class="comments-select" style="flex: 1;">
+                    <option value="random" selected>Random Sample</option>
+                    <option value="ordered">Ordered (Top down)</option>
                 </select>
-                <button id="searchBtn" class="search-button">Extract Comments</button>
+                <button id="searchBtn" class="search-button" style="flex: 1 1 100%;">Extract Comments</button>
             </div>
         </div>
 
         <!-- Loading Spinner -->
         <div id="loadingSpinner" class="loading-spinner" style="display: none;">
             <div class="spinner"></div>
-            <p>Extracting comments... This may take a moment.</p>
+            <p id="loadingText">Extracting comments... This may take a moment.</p>
         </div>
 
         <!-- Error Message -->
@@ -59,7 +64,7 @@
         <div id="resultsSection" class="results-section" style="display: none;">
             <div class="results-header">
                 <div class="results-info">
-                    <h2>Comments Found: <span id="commentCount">0</span></h2>
+                    <h2>Comments Extracted: <span id="commentCount">0</span></h2>
                     <p id="selectionInfo" class="selection-info"></p>
                 </div>
                 <div class="action-buttons">
@@ -81,9 +86,8 @@
 
         <!-- Info Section -->
         <div class="info-section">
-            <h3>Which method should I use?</h3>
-            <p><strong>🕵️ Scraper Method:</strong> Has no quotas or limits. If the video is age-restricted, you must provide a `cookies.txt` file in the Settings.</p>
-            <p style="margin-top: 10px;"><strong>🌐 Official API Method:</strong> Very fast and uses Google Login directly. Restricted by YouTube's daily API quota. Requires Google Cloud setup by the host.</p>
+            <h3>How sampling works:</h3>
+            <p>To avoid popularity biases, selecting <strong>Random Sample</strong> triggers a "Deep Scan". The app fetches thousands of comments in the background before randomizing them. This guarantees true randomness across the entire video, but may take 5-10 seconds longer!</p>
         </div>
     </div>
 

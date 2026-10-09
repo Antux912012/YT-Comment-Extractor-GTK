@@ -4,11 +4,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchBtn = document.getElementById('searchBtn');
     const videoUrl = document.getElementById('videoUrl');
     const extractMethod = document.getElementById('extractMethod');
+    const sortMode = document.getElementById('sortMode');
     const numComments = document.getElementById('numComments');
     const selectionMode = document.getElementById('selectionMode');
     
     // UI Elements
     const loadingSpinner = document.getElementById('loadingSpinner');
+    const loadingText = document.getElementById('loadingText');
     const errorMessage = document.getElementById('errorMessage');
     const resultsSection = document.getElementById('resultsSection');
     const commentsList = document.getElementById('commentsList');
@@ -75,6 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         hideError();
         resultsSection.style.display = 'none';
+        
+        if (selectionMode.value === 'random') {
+            loadingText.textContent = "Performing Deep Scan for true randomness... This may take up to 10 seconds.";
+        } else {
+            loadingText.textContent = "Extracting comments... This may take a moment.";
+        }
         loadingSpinner.style.display = 'block';
 
         try {
@@ -84,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     url: url,
                     method: extractMethod.value,
+                    sort_mode: sortMode.value,
                     num_comments: numComments.value,
                     selection_mode: selectionMode.value
                 })
@@ -103,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function displayResults(data) {
         document.getElementById('commentCount').textContent = data.count;
-        document.getElementById('selectionInfo').textContent = `Showing ${data.count} ${data.selection_mode === 'random' ? 'randomly selected' : 'ordered'} comments`;
+        document.getElementById('selectionInfo').innerHTML = `Selected <strong>${data.count}</strong> comments out of a fetched pool of <strong>${data.pool_size_fetched}</strong>.<br>Mode: <strong>${data.selection_mode === 'random' ? 'Random Sample (Debiased)' : 'Ordered'}</strong>`;
         commentsList.innerHTML = '';
         data.comments.forEach(c => {
             const tr = document.createElement('tr');

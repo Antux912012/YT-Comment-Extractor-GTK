@@ -83,7 +83,7 @@ def get_comment_date(comment):
             if parsed: return parsed
     return ''
 
-def get_comments_scraper(video_url, max_comments=None):
+def get_comments_scraper(video_url, max_comments=None, sort_mode='popular'):
     video_id = extract_video_id(video_url)
     if not video_id: return []
     all_comments = []
@@ -96,7 +96,10 @@ def get_comments_scraper(video_url, max_comments=None):
                 cj.load(ignore_discard=True, ignore_expires=True)
                 downloader.session.cookies.update(cj)
             
-            gen = downloader.get_comments_from_url(f"https://www.youtube.com/watch?v={video_id}")
+            # sort_by: 0 = popular, 1 = recent
+            yt_sort_by = 1 if sort_mode == 'recent' else 0
+            
+            gen = downloader.get_comments_from_url(f"https://www.youtube.com/watch?v={video_id}", sort_by=yt_sort_by)
             for comment in gen:
                 text = comment.get('text', '').strip()
                 if not text: continue
@@ -127,10 +130,12 @@ def get_comments_scraper(video_url, max_comments=None):
         except Exception as e: print(f"Scraper Method 2 failed: {e}")
     return all_comments
 
-def get_comments_api(video_id, max_comments, access_token):
+def get_comments_api(video_id, max_comments, access_token, sort_mode='popular'):
     url = 'https://www.googleapis.com/youtube/v3/commentThreads'
     headers = {'Authorization': f'Bearer {access_token}'}
-    params = {'part': 'snippet,replies', 'videoId': video_id, 'maxResults': 100, 'textFormat': 'plainText'}
+    api_order = 'time' if sort_mode == 'recent' else 'relevance'
+    
+    params = {'part': 'snippet,replies', 'videoId': video_id, 'maxResults': 100, 'textFormat': 'plainText', 'order': api_order}
     comments = []
     
     while True:
@@ -226,27 +231,38 @@ def handle_cookies():
 def extract():
     try:
         data = request.get_json()
-        video_url, method = data.get('url', '').strip(), data.get('method', 'scraper')
-        num_comments, selection_mode = data.get('num_comments', 100), data.get('selection_mode', 'random')
+        video_url = data.get('url', '').strip()
+        method = data.get('method', 'scraper')
+        sort_mode = data.get('sort_mode', 'popular')
+        num_comments = data.get('num_comments', 100)
+        selection_mode = data.get('selection_mode', 'random')
         
         if not video_url: return jsonify({'error': 'Provide a valid URL'}), 400
         video_id = extract_video_id(video_url)
         if not video_id: return jsonify({'error': 'Invalid YouTube URL'}), 400
 
         num_comments = None if str(num_comments).lower() == 'all' else max(1, min(int(num_comments), 10000))
-        pool_size = num_comments if selection_mode == 'ordered' and num_comments else (1000 if num_comments is None else min(num_comments * 3, 10000))
+        
+        # FIXED: Deep pool logic for true randomness
+        if selection_mode == 'random':
+            # We want to fetch a massive pool of comments before randomizing to avoid bias
+            # Capped at 5000 to balance true randomness with server timeout times.
+            pool_size = 5000
+        else:
+            # Ordered requires only exactly what they asked for
+            pool_size = num_comments if num_comments else None
 
         if method == 'api':
             if 'google_token' not in session: return jsonify({'error': 'Not logged in with Google.'}), 401
             try:
-                all_comments = get_comments_api(video_id, max_comments=pool_size, access_token=session['google_token'])
+                all_comments = get_comments_api(video_id, max_comments=pool_size, access_token=session['google_token'], sort_mode=sort_mode)
             except Exception as e:
                 if "UNAUTHORIZED" in str(e):
                     session.pop('google_token', None)
                     return jsonify({'error': 'Session expired. Please sign in again.'}), 401
                 raise e
         else:
-            all_comments = get_comments_scraper(video_url, max_comments=pool_size)
+            all_comments = get_comments_scraper(video_url, max_comments=pool_size, sort_mode=sort_mode)
 
         if not all_comments:
             return jsonify({'error': 'No comments found. Try using the other method or check permissions.'}), 404
@@ -259,7 +275,7 @@ def extract():
                 random.shuffle(all_comments)
                 selected = all_comments
 
-        return jsonify({'success': True, 'comments': selected, 'count': len(selected), 'total_available': len(all_comments)})
+        return jsonify({'success': True, 'comments': selected, 'count': len(selected), 'total_available': len(all_comments), 'pool_size_fetched': len(all_comments)})
     except Exception as e: return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/api/download', methods=['POST'])
