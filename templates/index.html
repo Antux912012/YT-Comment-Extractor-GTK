@@ -12,8 +12,10 @@
         <div class="header">
             <h1>YouTube Comments Extractor</h1>
             <p class="subtitle">Extract random comments or download all comments from any YouTube video</p>
-            <button id="themeToggle" class="theme-toggle-button" type="button">Switch to dark mode</button>
-            <button id="settingsBtn" class="theme-toggle-button" style="margin-left: 10px;" type="button">⚙️ Settings (Cookies)</button>
+            <div style="margin-top: 15px;">
+                <button id="themeToggle" class="theme-toggle-button" type="button">Switch to dark mode</button>
+                <button id="settingsBtn" class="theme-toggle-button" style="margin-left: 10px;" type="button">⚙️ Extraction Settings</button>
+            </div>
         </div>
 
         <!-- Search Box -->
@@ -26,20 +28,19 @@
                     placeholder="Paste YouTube video link here..."
                     autocomplete="off"
                 >
+                <select id="extractMethod" class="comments-select" style="background-color: #e2e8f0;">
+                    <option value="scraper" selected>🕵️ Method: Scraper (Cookies)</option>
+                    <option value="api">🌐 Method: Official API (Login)</option>
+                </select>
                 <select id="numComments" class="comments-select">
                     <option value="25">25 comments</option>
-                    <option value="50">50 comments</option>
-                    <option value="75">75 comments</option>
                     <option value="100" selected>100 comments</option>
-                    <option value="150">150 comments</option>
-                    <option value="200">200 comments</option>
                     <option value="300">300 comments</option>
-                    <option value="500">500 comments</option>
                     <option value="all">All comments</option>
                 </select>
                 <select id="selectionMode" class="comments-select">
-                    <option value="random" selected>Random comments</option>
-                    <option value="ordered">Ordered comments</option>
+                    <option value="random" selected>Random</option>
+                    <option value="ordered">Ordered</option>
                 </select>
                 <button id="searchBtn" class="search-button">Extract Comments</button>
             </div>
@@ -58,43 +59,31 @@
         <div id="resultsSection" class="results-section" style="display: none;">
             <div class="results-header">
                 <div class="results-info">
-                    <h2>Comments Found: <span id="commentCount">0</span> / <span id="totalCount">0</span></h2>
+                    <h2>Comments Found: <span id="commentCount">0</span></h2>
                     <p id="selectionInfo" class="selection-info"></p>
                 </div>
                 <div class="action-buttons">
-                    <button id="downloadCsvBtn" class="btn btn-download" title="Download as CSV with pipe delimiter">📥 CSV</button>
-                    <button id="downloadJsonBtn" class="btn btn-download" title="Download as JSON">📥 JSON</button>
-                    <button id="copyBtn" class="btn btn-copy" title="Copy to clipboard">📋 Copy</button>
-                    <button id="viewJsonBtn" class="btn btn-info" title="View as JSON">👁 JSON</button>
+                    <button id="downloadCsvBtn" class="btn btn-download">📥 CSV</button>
+                    <button id="downloadJsonBtn" class="btn btn-download">📥 JSON</button>
+                    <button id="copyBtn" class="btn btn-copy">📋 Copy</button>
+                    <button id="viewJsonBtn" class="btn btn-info">👁 JSON</button>
                 </div>
             </div>
 
             <!-- Comments Table Preview -->
             <div class="comments-table-container">
                 <table id="commentsTable" class="comments-table">
-                    <thead>
-                        <tr>
-                            <th>Nickname</th>
-                            <th>Date</th>
-                            <th>Comment</th>
-                        </tr>
-                    </thead>
-                    <tbody id="commentsList">
-                    </tbody>
+                    <thead><tr><th>Nickname</th><th>Date</th><th>Comment</th></tr></thead>
+                    <tbody id="commentsList"></tbody>
                 </table>
             </div>
         </div>
 
         <!-- Info Section -->
         <div class="info-section">
-            <h3>How to use:</h3>
-            <ol>
-                <li>Copy the link from any YouTube video</li>
-                <li>Paste it in the search box above</li>
-                <li>Click "Extract Comments"</li>
-                <li>Download the CSV or copy the data</li>
-                <li>If the video is restricted, click "Settings (Cookies)", paste a Netscape format cookies file content, save it, and try again.</li>
-            </ol>
+            <h3>Which method should I use?</h3>
+            <p><strong>🕵️ Scraper Method:</strong> Has no quotas or limits. If the video is age-restricted, you must provide a `cookies.txt` file in the Settings.</p>
+            <p style="margin-top: 10px;"><strong>🌐 Official API Method:</strong> Very fast and uses Google Login directly. Restricted by YouTube's daily API quota. Requires Google Cloud setup by the host.</p>
         </div>
     </div>
 
@@ -105,9 +94,7 @@
                 <h3>JSON Data</h3>
                 <button id="jsonModalClose" class="json-modal-close">&times;</button>
             </div>
-            <div class="json-modal-body">
-                <pre id="jsonContent"></pre>
-            </div>
+            <div class="json-modal-body"><pre id="jsonContent"></pre></div>
             <div class="json-modal-footer">
                 <button id="copyJsonBtn" class="btn btn-copy-json">Copy JSON</button>
                 <button id="jsonModalCloseBtn" class="btn json-modal-close-btn">Close</button>
@@ -119,18 +106,27 @@
     <div id="settingsModal" class="json-modal">
         <div class="json-modal-content">
             <div class="json-modal-header">
-                <h3>Settings</h3>
+                <h3>Extraction Settings</h3>
                 <button id="settingsModalClose" class="json-modal-close">&times;</button>
             </div>
-            <div class="json-modal-body">
-                <p>Paste the contents of your exported cookies.txt file here (Netscape format) to bypass age/login restrictions:</p>
-                <textarea id="cookiesInput" style="width: 100%; height: 200px; margin-top: 10px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; padding: 10px;"></textarea>
-                <p id="cookiesStatus" style="margin-top: 10px; font-weight: bold;"></p>
-            </div>
-            <div class="json-modal-footer">
-                <button id="saveCookiesBtn" class="btn btn-download">Save Cookies</button>
-                <button id="clearCookiesBtn" class="btn btn-copy-json">Clear Cookies</button>
-                <button id="settingsModalCloseBtn" class="btn json-modal-close-btn">Close</button>
+            <div class="json-modal-body" style="display: flex; gap: 20px;">
+                <div style="flex: 1; padding-right: 20px; border-right: 1px solid #ccc;">
+                    <h4>🌐 Method: Official API</h4>
+                    <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">Authenticate with Google to securely fetch restricted comments using the official API.</p>
+                    <div id="apiStatusBox" style="padding: 15px; background: #e2e8f0; border-radius: 8px;">
+                        Loading status...
+                    </div>
+                </div>
+                <div style="flex: 1;">
+                    <h4>🕵️ Method: Scraper (Cookies)</h4>
+                    <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">Paste Netscape format cookies.txt content to bypass age/login restrictions manually.</p>
+                    <p id="cookiesStatus" style="font-weight: bold; margin-bottom: 5px;"></p>
+                    <textarea id="cookiesInput" style="width: 100%; height: 120px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; padding: 10px;"></textarea>
+                    <div style="margin-top: 10px; display: flex; gap: 10px;">
+                        <button id="saveCookiesBtn" class="btn btn-download">Save Cookies</button>
+                        <button id="clearCookiesBtn" class="btn btn-copy-json">Clear</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
