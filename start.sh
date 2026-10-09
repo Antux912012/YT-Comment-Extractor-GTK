@@ -7,13 +7,13 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${CYAN}=========================================================${NC}"
-echo -e "${GREEN}          YOUTUBE COMMENT EXTRACTOR - LAUNCHER           ${NC}"
+echo -e "${GREEN}    YOUTUBE COMMENT EXTRACTOR - DESKTOP LAUNCHER         ${NC}"
 echo -e "${CYAN}=========================================================${NC}\n"
 
 # Check if .env already exists and contains the keys
 if [ -f ".env" ] && grep -q "GOOGLE_CLIENT_ID" ".env" && grep -q "GOOGLE_CLIENT_SECRET" ".env"; then
     echo -e "${GREEN}✓ Credentials found in .env file!${NC}"
-    echo -e "Starting the application...\n"
+    export $(grep -v '^#' .env | xargs)
 else
     echo -e "${YELLOW}No Google Cloud credentials found. Let's set them up!${NC}"
     echo -e "To use the Official YouTube API, you need a free Client ID and Secret.\n"
@@ -44,36 +44,19 @@ else
     echo "GOOGLE_REDIRECT_URI=http://localhost:5000/api/auth/callback" >> .env
 
     echo -e "${GREEN}✓ Credentials saved successfully to .env!${NC}\n"
+    export $(grep -v '^#' .env | xargs)
 fi
 
-# Detect docker vs podman
-if command -v docker &> /dev/null; then
-    # Check if docker-compose plugin or standalone exists
-    if docker compose version &> /dev/null; then
-        CMD="docker compose"
-    elif command -v docker-compose &> /dev/null; then
-        CMD="docker-compose"
-    else
-        echo "Docker is installed but docker-compose is not found."
-        exit 1
-    fi
-elif command -v podman &> /dev/null; then
-    if command -v podman-compose &> /dev/null; then
-        CMD="podman-compose"
-    else
-        echo "Podman is installed but podman-compose is not found."
-        exit 1
-    fi
+echo -e "${CYAN}Checking Python Virtual Environment...${NC}"
+if [ ! -d "venv" ]; then
+    echo -e "${YELLOW}Creating virtual environment and installing dependencies...${NC}"
+    # Ensure system dependencies for pywebview (gtk/webkit) are usually present on modern Linux
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
 else
-    echo "Neither Docker nor Podman was found. Please install one to run this app."
-    exit 1
+    source venv/bin/activate
 fi
 
-echo -e "${CYAN}Executing: ${CMD} up -d --build${NC}"
-$CMD up -d --build
-
-echo -e "\n${GREEN}=========================================================${NC}"
-echo -e "${GREEN}✓ Application is starting in the background!${NC}"
-echo -e "Wait a few seconds for the build, then open your browser at:"
-echo -e "${CYAN}http://localhost:5000${NC}"
-echo -e "${GREEN}=========================================================${NC}"
+echo -e "${GREEN}Starting Desktop Application...${NC}"
+python app.py

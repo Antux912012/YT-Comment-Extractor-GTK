@@ -5,9 +5,11 @@ import random
 import os
 import re
 import json
+import threading
 from urllib.parse import urlparse, parse_qs, urlencode
 import requests
 from datetime import datetime, timedelta
+import webview
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
@@ -238,5 +240,22 @@ def download():
     output.seek(0)
     return send_file(io.BytesIO(output.getvalue().encode('utf-8')), mimetype='text/csv', as_attachment=True, download_name=f'yt_comments_{datetime.now().strftime("%Y%m%d%H%M%S")}.csv')
 
+def start_server():
+    # Run the server on port 5000 in a daemon thread so the UI can wrap it
+    app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Boot the local Flask server
+    t = threading.Thread(target=start_server)
+    t.daemon = True
+    t.start()
+    
+    # Launch the native desktop window using pywebview
+    webview.create_window(
+        title='YouTube Comments Extractor', 
+        url='http://127.0.0.1:5000', 
+        width=1200, 
+        height=800,
+        min_size=(800, 600)
+    )
+    webview.start()
