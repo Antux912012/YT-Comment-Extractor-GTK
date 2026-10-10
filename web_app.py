@@ -3,19 +3,19 @@ import threading
 import time
 import socket
 import json
+import random
+import csv
+import tempfile
 from flask import Flask, render_template, request, Response, jsonify, send_file
 from werkzeug.utils import secure_filename
 from zeroconf import ServiceInfo, Zeroconf
-import tempfile
-import csv
 
-# Assuming scraper.py is in the same directory
 from scraper import get_comments_scraper_gen, extract_video_id
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
-# Global state for simple progress tracking (in-memory for single user)
+# Global state for extraction tracking
 extraction_state = {
     "status": "idle",
     "comments": [],
@@ -23,77 +23,120 @@ extraction_state = {
     "progress": 0,
     "total_target": 0
 }
+stop_event = threading.Event()
+extraction_lock = threading.Lock()
 
-class DummyLogger:
-    def info(self, msg):
-        extraction_state["logs"].append(f"[INFO] {msg}")
-    def error(self, msg):
-        extraction_state["logs"].append(f"[ERROR] {msg}")
-    def debug(self, msg):
-        extraction_state["logs"].append(f"[DEBUG] {msg}")
+def get_local_ip():
+    """Discover the routable local network IP address."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.255.255.255', 1))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = '127.0.0.1'
+    finally:
+        s.close()
+    return ip
 
-def run_extraction(url, sort_mode, strategy_idx, sample_size, pool_size, include_replies, cookies_path):
-    extraction_state["status"] = "running"
-    extraction_state["comments"] = []
-    extraction_state["logs"] = []
-    extraction_state["progress"] = 0
-    extraction_state["total_target"] = sample_size if strategy_idx != 0 else "All"
-    
-    logger = DummyLogger()
-    logger.info(f"Starting extraction for {url}...")
+def run_extraction(url, sort_mode_str, strategy_idx, sample_size, pool_size, include_replies, cookies_path):
+    global extraction_state, stop_event
+    with extraction_lock:
+        extraction_state["status"] = "running"
+        extraction_state["comments"] = []
+        extraction_state["logs"] = []
+        extraction_state["progress"] = 0
+        extraction_state["total_target"] = sample_size if strategy_idx != 0 else "All"
+        stop_event.clear()
+
+    extraction_state["logs"].append(f"[SYSTEM] Starting extraction for URL: {url}")
     
     try:
-        max_comments = None
-        if strategy_idx in (1, 2) and pool_size > 0:
-            max_comments = pool_size
-            
-        gen = get_comments_scraper_gen(url, sort_mode, cookies_path, logger, max_comments, include_replies)
-        
+        # Determine extraction pool size
+        # Strategy 0: Full scan (All comments)
+        # Strategy 1: Unbiased Random Sample (Full pool)
+        # Strategy 2: Fast Random Sample (2,000 pool)
+        # Strategy 3: Sequential (First N)
+        if strategy_idx in (0, 1):
+            max_pool = None
+        elif strategy_idx == 2:
+            max_pool = 2000
+        else:
+            max_pool = sample_size
+
+        gen = get_comments_scraper_gen(
+            video_url=url,
+            max_comments=max_pool,
+            sort_mode=sort_mode_str,
+            include_replies=include_replies,
+            cookies_file=cookies_path,
+            stop_event=stop_event
+        )
+
         all_comments = []
-        for c in gen:
-            all_comments.append(c)
-            extraction_state["progress"] = len(all_comments)
-            
-        # Apply sampling
-        logger.info(f"Total extracted: {len(all_comments)} comments.")
-        
-        if strategy_idx == 1 and sample_size > 0: # Head and Tail
-            half = sample_size // 2
+        aborted = False
+
+        for chunk in gen:
+            if 'log' in chunk:
+                extraction_state["logs"].append(chunk['log'])
+            if 'stats' in chunk:
+                extraction_state["progress"] = chunk['stats']['total']
+            if 'error' in chunk:
+                extraction_state["status"] = "error"
+                extraction_state["logs"].append(f"[ERROR] {chunk['error']}")
+                return
+            if 'result' in chunk:
+                all_comments = chunk['result']
+                aborted = chunk.get('aborted', False)
+
+        if not all_comments:
+            extraction_state["status"] = "error"
+            extraction_state["logs"].append("[ERROR] No comments were retrieved from YouTube.")
+            return
+
+        # Apply sampling strategy
+        if strategy_idx in (1, 2) and sample_size > 0:
             if len(all_comments) > sample_size:
-                final_comments = all_comments[:half] + all_comments[-half:]
-            else:
-                final_comments = all_comments
-        elif strategy_idx == 2 and sample_size > 0: # Random
-            import random
-            if len(all_comments) > sample_size:
+                extraction_state["logs"].append(
+                    f"[SAMPLE] Applying uniform random sampling: selecting {sample_size} from {len(all_comments)} comments."
+                )
                 final_comments = random.sample(all_comments, sample_size)
             else:
                 final_comments = all_comments
+        elif strategy_idx == 3 and sample_size > 0:
+            final_comments = all_comments[:sample_size]
         else:
             final_comments = all_comments
-            
+
         extraction_state["comments"] = final_comments
         extraction_state["status"] = "done"
-        logger.info("Extraction finished successfully.")
-        
+        if aborted:
+            extraction_state["logs"].append(f"[COMPLETE] Extraction finalized (aborted early). Ready with {len(final_comments)} comments.")
+        else:
+            extraction_state["logs"].append(f"[COMPLETE] Extraction finished successfully with {len(final_comments)} comments.")
+
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+        extraction_state["logs"].append(f"[FATAL] Unexpected error: {str(e)}")
         extraction_state["status"] = "error"
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', local_ip=get_local_ip())
 
 @app.route('/api/start', methods=['POST'])
 def api_start():
     data = request.form
-    url = data.get('url', '')
-    sort_mode = int(data.get('sort_mode', 0))
+    url = data.get('url', '').strip()
+    video_id = extract_video_id(url)
+    if not video_id:
+        return jsonify({"error": "Invalid YouTube URL or Video ID."}), 400
+
+    raw_sort = data.get('sort_mode', '0')
+    sort_mode_str = "recent" if str(raw_sort) == '1' else "popular"
     strategy_idx = int(data.get('strategy_idx', 0))
-    sample_size = int(data.get('sample_size', 0))
-    pool_size = int(data.get('pool_size', 0))
+    sample_size = int(data.get('sample_size', 100))
+    pool_size = int(data.get('pool_size', 1000))
     include_replies = data.get('include_replies', 'false').lower() == 'true'
-    
+
     cookies_path = None
     if 'cookies' in request.files:
         f = request.files['cookies']
@@ -102,12 +145,24 @@ def api_start():
             f.save(cookies_path)
 
     if extraction_state["status"] == "running":
-        return jsonify({"error": "An extraction is already running."}), 400
+        return jsonify({"error": "An extraction is already running. Please cancel it or wait."}), 400
 
-    t = threading.Thread(target=run_extraction, args=(url, sort_mode, strategy_idx, sample_size, pool_size, include_replies, cookies_path))
+    t = threading.Thread(
+        target=run_extraction,
+        args=(url, sort_mode_str, strategy_idx, sample_size, pool_size, include_replies, cookies_path),
+        daemon=True
+    )
     t.start()
-    
     return jsonify({"success": True})
+
+@app.route('/api/cancel', methods=['POST'])
+def api_cancel():
+    global stop_event
+    if extraction_state["status"] == "running":
+        stop_event.set()
+        extraction_state["logs"].append("[USER] Cancel requested. Finalizing collected comments...")
+        return jsonify({"success": True, "message": "Cancellation requested."})
+    return jsonify({"error": "No extraction currently running."}), 400
 
 @app.route('/api/status')
 def api_status():
@@ -115,50 +170,62 @@ def api_status():
         "status": extraction_state["status"],
         "progress": extraction_state["progress"],
         "total_target": extraction_state["total_target"],
-        "logs": extraction_state["logs"][-20:], # Send last 20 logs
+        "logs": extraction_state["logs"][-30:],
         "total_comments": len(extraction_state["comments"])
     })
 
 @app.route('/api/download')
 def api_download():
-    if extraction_state["status"] != "done":
-        return "Not finished yet", 400
-        
+    if extraction_state["status"] != "done" or not extraction_state["comments"]:
+        return "Extraction not finished or no comments available.", 400
+
     out_path = os.path.join(app.config['UPLOAD_FOLDER'], 'comments_export.csv')
     with open(out_path, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(["ID", "Author", "Text", "Like Count", "Is Favorited", "Date", "Parent ID"])
+        writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow([
+            'Comment ID',
+            'Author',
+            'Channel ID',
+            'Published Date',
+            'Likes',
+            'Is Reply',
+            'Reply Count',
+            'Comment Text'
+        ])
         for c in extraction_state["comments"]:
             writer.writerow([
-                c.get("id", ""),
-                c.get("author", ""),
-                c.get("text", ""),
-                c.get("like_count", 0),
-                c.get("is_favorited", False),
-                c.get("time_text", ""),
-                c.get("parent", "")
+                c.get('cid', ''),
+                c.get('nickname', ''),
+                c.get('channel_id', ''),
+                c.get('date', ''),
+                c.get('votes', '0'),
+                'Yes' if c.get('is_reply', False) else 'No',
+                c.get('reply_count', 0),
+                c.get('comment', '')
             ])
-            
+
     return send_file(out_path, as_attachment=True, download_name="comments_export.csv")
 
 def register_mdns():
-    zeroconf = Zeroconf()
+    """Registers mDNS with the actual routable LAN IP address."""
+    zc = Zeroconf()
     desc = {'path': '/'}
-    # Standard mDNS uses .local
+    local_ip = get_local_ip()
     info = ServiceInfo(
         "_http._tcp.local.",
         "YT Comment Extractor Web._http._tcp.local.",
-        addresses=[socket.inet_aton("0.0.0.0")],
+        addresses=[socket.inet_aton(local_ip)],
         port=5000,
         properties=desc,
         server="yt-extractor.local.",
     )
-    zeroconf.register_service(info)
-    return zeroconf
+    zc.register_service(info)
+    return zc
 
 if __name__ == '__main__':
     zc = register_mdns()
-    print("mDNS broadcasted. Server starting on 0.0.0.0:5000")
+    local_ip = get_local_ip()
+    print(f"mDNS active as yt-extractor.local ({local_ip}:5000). Server starting on 0.0.0.0:5000")
     try:
         app.run(host='0.0.0.0', port=5000)
     finally:

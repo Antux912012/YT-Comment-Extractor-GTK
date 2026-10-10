@@ -26,7 +26,29 @@ flatpak-builder --user --install --force-clean build-dir io.github.antux912012.Y
 flatpak run io.github.antux912012.YTCommentExtractor
 ```
 
+### Web Service & System Tray Edition
+
+The application also includes a dedicated local web server and system tray service styled with the Nord Palette.
+
+#### 1. Flatpak Web Service
+```bash
+flatpak-builder --user --install --force-clean build-dir-service io.github.antux912012.YTCommentExtractor.Service.yml
+flatpak run io.github.antux912012.YTCommentExtractor.Service
+```
+
+#### 2. Universal AppImage (Portable)
+Download `YT-Comment-Extractor-Service.AppImage` from GitHub Releases and run:
+```bash
+chmod +x YT-Comment-Extractor-Service.AppImage
+./YT-Comment-Extractor-Service.AppImage
+```
+
+Once launched, the service sits in your system tray and is accessible from any device on your local Wi-Fi:
+- **mDNS Network Address**: `http://yt-extractor.local:5000`
+- **Local Machine**: `http://127.0.0.1:5000`
+
 ### Local Development
+
 
 To run the application locally without Flatpak:
 1. Ensure **Python 3.10 or higher** is installed (Recommended: Python 3.11+), along with `gtk4`, `libadwaita`, and `python3-gi`.
@@ -50,7 +72,7 @@ To run the application locally without Flatpak:
 
 ## Version
 
-Current version: **0.1ac**
+Current version: **0.2ac**
 
 ## Academic Research & PhD Thesis
 

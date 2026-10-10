@@ -8,4 +8,4 @@ Terminal=false
 Type=Application
 Categories=Utility;AudioVideo;Network;
 StartupNotify=true
-X-AppVersion=0.1ac
+X-AppVersion=0.2ac

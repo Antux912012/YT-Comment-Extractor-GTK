@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=YouTube Comment Extractor Service
+GenericName=Comment Extractor Web Service
+Comment=Background web server and system tray service for YouTube Comment Extractor
+Exec=start-yt-extractor-service
+Icon=io.github.antux912012.YTCommentExtractor.Service
+Terminal=false
+Type=Application
+Categories=Utility;AudioVideo;Network;
+StartupNotify=true
+X-AppVersion=0.2ac

@@ -6,8 +6,13 @@ command: start-yt-extractor-service
 finish-args:
   - --share=network
   - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
   - --filesystem=xdg-download
   - --filesystem=home
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.Notifications
 modules:
   - name: python-deps
     buildsystem: simple
@@ -30,6 +35,8 @@ modules:
       - cp scraper.py web_app.py service_manager.py icon.png /app/share/yt-extractor/
       - cp templates/index.html /app/share/yt-extractor/templates/
       - install -D start-yt-extractor-service /app/bin/start-yt-extractor-service
+      - install -D io.github.antux912012.YTCommentExtractor.Service.desktop /app/share/applications/io.github.antux912012.YTCommentExtractor.Service.desktop
+      - install -D io.github.antux912012.YTCommentExtractor.Service.svg /app/share/icons/hicolor/scalable/apps/io.github.antux912012.YTCommentExtractor.Service.svg
     sources:
       - type: dir
         path: .

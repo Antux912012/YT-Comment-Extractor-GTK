@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YT Comment Extractor</title>
+    <title>YouTube Comment Extractor Web</title>
     <style>
         /* Nord Palette Colors */
         :root {
@@ -28,149 +28,238 @@
         body {
             background-color: var(--nord0);
             color: var(--nord4);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 24px;
             display: flex;
             justify-content: center;
         }
 
         .container {
             background-color: var(--nord1);
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
             width: 100%;
-            max-width: 600px;
+            max-width: 640px;
         }
 
         h1 {
             color: var(--nord8);
             text-align: center;
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 26px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--nord9);
+            font-size: 13px;
+            margin-bottom: 24px;
+        }
+
+        .info-pill {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
             margin-bottom: 20px;
+            font-size: 12px;
+            color: var(--nord7);
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }
 
         label {
             display: block;
-            margin-bottom: 5px;
-            color: var(--nord4);
+            margin-bottom: 6px;
+            color: var(--nord5);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .helper-text {
+            font-size: 11px;
+            color: var(--nord3);
+            margin-top: 4px;
         }
 
         input[type="text"], input[type="number"], select, input[type="file"] {
             width: 100%;
-            padding: 10px;
+            padding: 10px 12px;
             background-color: var(--nord2);
             border: 1px solid var(--nord3);
             color: var(--nord6);
-            border-radius: 4px;
+            border-radius: 6px;
             box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: var(--nord8);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--nord5);
+            font-size: 14px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--nord10);
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
         }
 
         button {
-            width: 100%;
+            flex: 1;
             padding: 12px;
             background-color: var(--nord10);
             color: var(--nord6);
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
-            transition: background-color 0.2s;
+            font-size: 15px;
+            font-weight: 600;
+            transition: background-color 0.2s, opacity 0.2s;
         }
 
-        button:hover {
+        button:hover:not(:disabled) {
             background-color: var(--nord9);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.cancel-btn {
+            background-color: var(--nord11);
+        }
+        button.cancel-btn:hover:not(:disabled) {
+            background-color: #d06d76;
+        }
+
+        button.download-btn {
+            background-color: var(--nord14);
+            color: var(--nord0);
+            margin-top: 14px;
+        }
+        button.download-btn:hover {
+            background-color: #b5d29d;
+        }
+
+        .status-bar {
+            margin-top: 18px;
+            text-align: center;
+            color: var(--nord14);
+            font-weight: 600;
+            font-size: 14px;
         }
 
         .logs {
             background-color: var(--nord0);
-            padding: 10px;
-            border-radius: 4px;
-            height: 150px;
+            padding: 12px;
+            border-radius: 6px;
+            height: 160px;
             overflow-y: auto;
-            font-family: monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
             font-size: 12px;
             color: var(--nord13);
-            margin-top: 20px;
-            border: 1px solid var(--nord3);
+            margin-top: 16px;
+            border: 1px solid var(--nord2);
+            line-height: 1.4;
         }
 
-        .status-bar {
-            margin-top: 15px;
-            text-align: center;
-            color: var(--nord14);
-            font-weight: bold;
-        }
-
-        .hidden { display: none; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>YT Comment Extractor Web</h1>
+    <h1>YouTube Comment Extractor</h1>
+    <div class="subtitle">University Research & Data Mining Service</div>
+    <div class="info-pill">
+        <span>🌐 mDNS: <strong>yt-extractor.local:5000</strong></span>
+        <span>💻 LAN IP: <strong>{{ local_ip }}:5000</strong></span>
+    </div>
+
     <form id="extractForm">
         <div class="form-group">
-            <label>YouTube Video URL or ID</label>
+            <label for="url">Target Video URL or Video ID</label>
             <input type="text" id="url" name="url" required placeholder="https://www.youtube.com/watch?v=...">
         </div>
-        
+
         <div class="form-group">
-            <label>Order on YouTube</label>
+            <label for="sort_mode">Sort Order on YouTube</label>
             <select name="sort_mode" id="sort_mode">
-                <option value="0">Top Comments</option>
+                <option value="0">Top Comments / Relevant</option>
                 <option value="1">Newest First</option>
             </select>
         </div>
 
         <div class="form-group">
-            <label>Sampling Strategy</label>
+            <label for="strategy_idx">Sampling & De-biasing Strategy</label>
             <select name="strategy_idx" id="strategy_idx">
-                <option value="0">Extract All Comments</option>
-                <option value="1">Head and Tail Limits</option>
-                <option value="2">Random Uniform</option>
+                <option value="0">Extract All Comments (Exhaustive Scan)</option>
+                <option value="1" selected>Unbiased Random Sample (Full Pool)</option>
+                <option value="2">Fast Random Sample (Pool: 2,000)</option>
+                <option value="3">Sequential (First N Comments as Ordered)</option>
             </select>
         </div>
 
-        <div class="form-group" id="sample_size_div" style="display:none;">
-            <label>Sample Size</label>
-            <input type="number" name="sample_size" id="sample_size" value="100">
+        <div class="form-group" id="sample_size_div">
+            <label for="sample_size">Sample Size (Target Comments)</label>
+            <input type="number" name="sample_size" id="sample_size" value="100" min="1" max="100000">
         </div>
-        
+
         <div class="form-group" id="pool_size_div" style="display:none;">
-            <label>Deep Scan Pool Size</label>
-            <input type="number" name="pool_size" id="pool_size" value="1000">
+            <label for="pool_size">Custom Pool Scan Size</label>
+            <input type="number" name="pool_size" id="pool_size" value="2000" min="100">
         </div>
 
         <div class="form-group">
-            <label>
-                <input type="checkbox" name="include_replies" value="true">
-                Include Replies (Threaded)
+            <label class="checkbox-label">
+                <input type="checkbox" name="include_replies" value="true" checked>
+                Include Replies (Threaded discussions)
             </label>
+            <div class="helper-text">Disable to prevent discussion thread bias in academic datasets.</div>
         </div>
 
         <div class="form-group">
-            <label>Cookies File (Optional)</label>
+            <label for="cookies">Cookies File (Optional Netscape .txt)</label>
             <input type="file" name="cookies" id="cookies" accept=".txt">
         </div>
 
-        <button type="submit" id="startBtn">Extract Comments</button>
+        <div class="button-group">
+            <button type="submit" id="startBtn">Extract Comments</button>
+            <button type="button" id="cancelBtn" class="cancel-btn hidden">Cancel</button>
+        </div>
     </form>
 
     <div class="status-bar" id="statusLabel">Status: Idle</div>
-    <div class="logs" id="logsBox">Logs will appear here...</div>
-    
-    <button id="downloadBtn" class="hidden" style="background-color: var(--nord14);" onclick="window.location='/api/download'">Download CSV</button>
+    <div class="logs" id="logsBox">System logs will appear here during extraction...</div>
+
+    <button id="downloadBtn" class="download-btn hidden" onclick="window.location='/api/download'">Export to CSV</button>
 </div>
 
 <script>
     const form = document.getElementById('extractForm');
     const startBtn = document.getElementById('startBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
     const strategySelect = document.getElementById('strategy_idx');
     const sampleSizeDiv = document.getElementById('sample_size_div');
     const poolSizeDiv = document.getElementById('pool_size_div');
@@ -181,39 +270,58 @@
     let pollInterval = null;
 
     strategySelect.addEventListener('change', (e) => {
-        if (e.target.value === "0") {
+        const val = e.target.value;
+        if (val === "0") {
             sampleSizeDiv.style.display = 'none';
             poolSizeDiv.style.display = 'none';
-        } else {
+        } else if (val === "1" || val === "3") {
             sampleSizeDiv.style.display = 'block';
-            poolSizeDiv.style.display = 'block';
+            poolSizeDiv.style.display = 'none';
+        } else if (val === "2") {
+            sampleSizeDiv.style.display = 'block';
+            poolSizeDiv.style.display = 'none';
         }
     });
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         startBtn.disabled = true;
+        cancelBtn.classList.remove('hidden');
+        cancelBtn.disabled = false;
         downloadBtn.classList.add('hidden');
-        
+        logsBox.innerHTML = "[SYSTEM] Initializing request...";
+
         const formData = new FormData(form);
-        
+
         try {
             const res = await fetch('/api/start', {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (res.ok) {
-                statusLabel.innerText = "Status: Starting...";
+                statusLabel.innerText = "Status: Connecting to YouTube...";
                 pollInterval = setInterval(pollStatus, 1000);
             } else {
                 const err = await res.json();
-                alert(err.error || "An error occurred");
+                alert(err.error || "An error occurred starting extraction.");
                 startBtn.disabled = false;
+                cancelBtn.classList.add('hidden');
             }
         } catch (err) {
             console.error(err);
+            alert("Network error contacting server.");
             startBtn.disabled = false;
+            cancelBtn.classList.add('hidden');
+        }
+    });
+
+    cancelBtn.addEventListener('click', async () => {
+        cancelBtn.disabled = true;
+        try {
+            await fetch('/api/cancel', { method: 'POST' });
+        } catch (e) {
+            console.error(e);
         }
     });
 
@@ -221,18 +329,19 @@
         try {
             const res = await fetch('/api/status');
             const data = await res.json();
-            
-            statusLabel.innerText = `Status: ${data.status} | Progress: ${data.progress}`;
-            
+
+            statusLabel.innerText = `Status: ${data.status.toUpperCase()} | Progress: ${data.progress} comments`;
+
             if (data.logs && data.logs.length > 0) {
                 logsBox.innerHTML = data.logs.join('<br>');
                 logsBox.scrollTop = logsBox.scrollHeight;
             }
-            
+
             if (data.status === 'done' || data.status === 'error') {
                 clearInterval(pollInterval);
                 startBtn.disabled = false;
-                if (data.status === 'done') {
+                cancelBtn.classList.add('hidden');
+                if (data.status === 'done' && data.total_comments > 0) {
                     downloadBtn.classList.remove('hidden');
                 }
             }
