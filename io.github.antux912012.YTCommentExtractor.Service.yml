@@ -1,0 +1,35 @@
+app-id: io.github.antux912012.YTCommentExtractor.Service
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+command: start-yt-extractor-service
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --filesystem=xdg-download
+  - --filesystem=home
+modules:
+  - name: python-deps
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+    build-commands:
+      - pip3 install --prefix=/app -r requirements.txt
+      - pip3 install --prefix=/app -r requirements_web.txt
+    sources:
+      - type: file
+        path: requirements.txt
+      - type: file
+        path: requirements_web.txt
+
+  - name: yt-extractor-service
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/share/yt-extractor/templates
+      - cp scraper.py web_app.py /app/share/yt-extractor/
+      - cp templates/index.html /app/share/yt-extractor/templates/
+      - install -D start-yt-extractor-service /app/bin/start-yt-extractor-service
+    sources:
+      - type: dir
+        path: .
