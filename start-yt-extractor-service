@@ -1,4 +1,4 @@
 #!/bin/bash
 export PYTHONPATH="/app/share/yt-extractor:$PYTHONPATH"
 cd /app/share/yt-extractor
-exec python3 web_app.py
+exec python3 service_manager.py

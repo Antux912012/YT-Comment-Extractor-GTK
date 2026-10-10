@@ -27,7 +27,7 @@ modules:
     buildsystem: simple
     build-commands:
       - mkdir -p /app/share/yt-extractor/templates
-      - cp scraper.py web_app.py /app/share/yt-extractor/
+      - cp scraper.py web_app.py service_manager.py icon.png /app/share/yt-extractor/
       - cp templates/index.html /app/share/yt-extractor/templates/
       - install -D start-yt-extractor-service /app/bin/start-yt-extractor-service
     sources:
