@@ -29,7 +29,7 @@ flatpak run io.github.antux912012.YTCommentExtractor
 ### Local Development
 
 To run the application locally without Flatpak:
-1. Ensure Python 3, `gtk4`, `libadwaita`, and `python3-gi` are installed.
+1. Ensure **Python 3.10 or higher** is installed (Recommended: Python 3.11+), along with `gtk4`, `libadwaita`, and `python3-gi`.
 2. Install Python dependencies:
    ```bash
    pip install -r requirements.txt
