@@ -52,6 +52,12 @@ To run the application locally without Flatpak:
 
 Current version: **0.1ac**
 
+## Academic Research & PhD Thesis
+
+The core algorithm for comment extraction and randomization implemented in this software constitutes a fundamental part of an ongoing PhD Thesis. 
+Unlike standard API-based approaches, this tool utilizes a custom extraction pipeline designed to mitigate data truncation and API biases by parsing comments directly via `yt-dlp`. 
+Furthermore, the advanced randomization and sampling strategies (such as probabilistic uniform sampling and deep-scan head-and-tail limits) were specifically engineered to provide statistically rigorous and unbiased datasets for academic research in social sciences and data analysis.
+
 ## License
 
 This tool was born as a University Research Tool and is distributed under the GNU Affero General Public License (AGPL).
