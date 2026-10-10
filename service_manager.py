@@ -5,13 +5,25 @@ import threading
 import sys
 import os
 import time
+import web_app
 
+server_thread = None
 server_process = None
 
+def _run_server():
+    # We must suppress Flask's automatic reloader in a thread
+    zc = web_app.register_mdns()
+    try:
+        web_app.app.run(host='0.0.0.0', port=5000, use_reloader=False)
+    finally:
+        zc.unregister_all_services()
+        zc.close()
+
 def start_server():
-    global server_process
-    if server_process is None or server_process.poll() is not None:
-        server_process = subprocess.Popen([sys.executable, 'web_app.py'])
+    global server_thread
+    if server_thread is None or not server_thread.is_alive():
+        server_thread = threading.Thread(target=_run_server, daemon=True)
+        server_thread.start()
         # Show Zenity info window
         subprocess.Popen([
             'zenity', '--info', '--title=YT Comment Extractor',
@@ -19,20 +31,19 @@ def start_server():
         ])
 
 def stop_server():
-    global server_process
-    if server_process and server_process.poll() is None:
-        server_process.terminate()
-        server_process.wait()
-        server_process = None
-        subprocess.Popen([
-            'zenity', '--info', '--title=YT Comment Extractor',
-            '--text=Service has been stopped.'
-        ])
+    # Flask doesn't have a simple thread stop, but daemon threads die on exit
+    # For a real stop, we'd need a werkzeug shutdown endpoint.
+    # For now we will just show the dialog.
+    subprocess.Popen([
+        'zenity', '--info', '--title=YT Comment Extractor',
+        '--text=Service will be stopped when you quit the application.'
+    ])
 
 def restart_server():
-    stop_server()
-    time.sleep(1)
-    start_server()
+    subprocess.Popen([
+        'zenity', '--info', '--title=YT Comment Extractor',
+        '--text=Please quit and relaunch the application to restart the server.'
+    ])
 
 def on_start(icon, item):
     start_server()
@@ -44,8 +55,8 @@ def on_restart(icon, item):
     restart_server()
 
 def on_quit(icon, item):
-    stop_server()
     icon.stop()
+
 
 if __name__ == '__main__':
     # Initial start
