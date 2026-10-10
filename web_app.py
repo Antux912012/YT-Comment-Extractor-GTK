@@ -151,7 +151,7 @@ def register_mdns():
         addresses=[socket.inet_aton("0.0.0.0")],
         port=5000,
         properties=desc,
-        server="web.yt-comment.extractor.local.",
+        server="yt-extractor.local.",
     )
     zeroconf.register_service(info)
     return zeroconf
