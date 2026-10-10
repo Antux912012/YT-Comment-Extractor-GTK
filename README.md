@@ -54,4 +54,4 @@ Current version: **0.1ac**
 
 ## License
 
-This project is licensed under standard open-source terms.
+This tool was born as a University Research Tool and is distributed under the GNU Affero General Public License (AGPL).
