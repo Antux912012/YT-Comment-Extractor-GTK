@@ -16,7 +16,7 @@ except ImportError:
 
 from scraper import get_comments_scraper_gen, extract_video_id
 
-APP_VERSION = "0.4"
+APP_VERSION = "0.5"
 
 
 def get_base_dir():
@@ -28,6 +28,27 @@ def get_base_dir():
 
 app = Flask(__name__, template_folder=os.path.join(get_base_dir(), 'templates'))
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
+
+
+@app.after_request
+def add_cors_headers(response):
+    origin = request.headers.get('Origin', '')
+    if (
+        origin.startswith('http://localhost')
+        or origin.startswith('http://127.0.0.1')
+        or origin.endswith('.github.io')
+    ):
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Max-Age'] = '86400'
+    return response
+
+
+@app.route('/api/<path:subpath>', methods=['OPTIONS'])
+def options_preflight(subpath):
+    return ('', 204)
+
 
 # Global state for extraction tracking
 extraction_state = {
@@ -128,7 +149,10 @@ def run_extraction(url, sort_mode_str, strategy_idx, sample_size, pool_size, inc
                 )
                 final_comments = random.sample(all_comments, sample_size)
             else:
-                msg = f"[SAMPLE] Total collected ({len(all_comments)}) <= requested sample ({sample_size}). Keeping all {len(all_comments)} available comments."
+                msg = (
+                    f"[SAMPLE] Total collected ({len(all_comments)}) <= requested sample ({sample_size}). "
+                    f"Keeping all {len(all_comments)} available comments."
+                )
                 if not include_replies:
                     msg += " (Replies excluded per settings; all available top-level comments retrieved)."
                 extraction_state["logs"].append(msg)
@@ -191,6 +215,10 @@ def api_start():
             safe_name = secure_filename(f.filename) or 'cookies.txt'
             cookies_path = os.path.join(app.config['UPLOAD_FOLDER'], f"yt_cookies_{os.getpid()}_{safe_name}")
             f.save(cookies_path)
+            try:
+                os.chmod(cookies_path, 0o600)
+            except Exception:
+                pass
 
     t = threading.Thread(
         target=run_extraction,
@@ -278,11 +306,24 @@ def register_mdns():
 
 
 if __name__ == '__main__':
-    zc = register_mdns()
-    local_ip = get_local_ip()
-    print(f"mDNS active as yt-extractor.local ({local_ip}:5000). Server starting on 0.0.0.0:5000")
+    import argparse
+    parser = argparse.ArgumentParser(description="YouTube Comment Extractor Web Service")
+    parser.add_argument("--lan", action="store_true", help="Expose server on 0.0.0.0 (LAN) and advertise via mDNS")
+    parser.add_argument("--host", default=None, help="Host to bind (defaults to 0.0.0.0 if --lan, else 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=5000, help="Port to listen on (default: 5000)")
+    args = parser.parse_args()
+
+    host = args.host if args.host else ("0.0.0.0" if args.lan else "127.0.0.1")
+    zc = None
+    if args.lan or host == "0.0.0.0":
+        zc = register_mdns()
+        local_ip = get_local_ip()
+        print(f"mDNS active as yt-extractor.local ({local_ip}:{args.port}). Server starting on {host}:{args.port}")
+    else:
+        print(f"Server starting on loopback only ({host}:{args.port}). Use --lan to expose on local network.")
+
     try:
-        app.run(host='0.0.0.0', port=5000)
+        app.run(host=host, port=args.port)
     finally:
         if zc:
             try:

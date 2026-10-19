@@ -300,7 +300,10 @@ def get_comments_scraper_gen(
 
                     if len(all_comments) == 1 or len(all_comments) % 25 == 0:
                         yield {
-                            'log': f'[PROGRESS] Collected {len(all_comments)} comments ({top_level_count} top-level, {reply_count} replies)...',
+                            'log': (
+                                f'[PROGRESS] Collected {len(all_comments)} comments '
+                                f'({top_level_count} top-level, {reply_count} replies)...'
+                            ),
                             'stats': {'total': len(all_comments), 'top_level': top_level_count, 'replies': reply_count}
                         }
 
@@ -313,7 +316,10 @@ def get_comments_scraper_gen(
                 raise
 
         yield {
-            'log': f'[SUCCESS] yt-dlp extraction complete. Total comments fetched: {len(all_comments)} ({top_level_count} top-level, {reply_count} replies).',
+            'log': (
+                f'[SUCCESS] yt-dlp extraction complete. Total comments fetched: '
+                f'{len(all_comments)} ({top_level_count} top-level, {reply_count} replies).'
+            ),
             'stats': {'total': len(all_comments), 'top_level': top_level_count, 'replies': reply_count}
         }
     except Exception as e:
@@ -325,7 +331,10 @@ def get_comments_scraper_gen(
 
     if not all_comments:
         yield {
-            'error': 'No comments found. The video may have comments disabled, be age-restricted, or require a cookies.txt file.'
+            'error': (
+                'No comments found. The video may have comments disabled, '
+                'be age-restricted, or require a cookies.txt file.'
+            )
         }
         return
 

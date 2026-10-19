@@ -1,0 +1,17 @@
+services:
+  yt-extractor-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: yt-comment-extractor-service:0.5
+    container_name: yt-extractor-service
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: false
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m

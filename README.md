@@ -72,7 +72,7 @@ To run the application locally without Flatpak:
 
 ## Version
 
-Current version: **0.4**
+Current version: **0.5**
 
 ## Academic Research & PhD Thesis
 

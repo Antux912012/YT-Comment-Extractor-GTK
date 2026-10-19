@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Comment Extractor — Web Client</title>
+    <style>
+        :root {
+            --nord0: #2E3440;
+            --nord1: #3B4252;
+            --nord2: #434C5E;
+            --nord3: #4C566A;
+            --nord4: #D8DEE9;
+            --nord5: #E5E9F0;
+            --nord6: #ECEFF4;
+            --nord7: #8FBCBB;
+            --nord8: #88C0D0;
+            --nord9: #81A1C1;
+            --nord10: #5E81AC;
+            --nord11: #BF616A;
+            --nord12: #D08770;
+            --nord13: #EBCB8B;
+            --nord14: #A3BE8C;
+            --nord15: #B48EAD;
+        }
+
+        body {
+            background-color: var(--nord0);
+            color: var(--nord4);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: var(--nord1);
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            width: 100%;
+            max-width: 680px;
+        }
+
+        h1 {
+            color: var(--nord8);
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 6px;
+            font-size: 26px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--nord9);
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .endpoint-card {
+            background-color: var(--nord2);
+            border: 1px solid var(--nord3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .endpoint-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .endpoint-row input {
+            flex: 1;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--nord11);
+            display: inline-block;
+        }
+        .status-dot.online {
+            background-color: var(--nord14);
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--nord5);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .helper-text {
+            font-size: 11px;
+            color: var(--nord3);
+            margin-top: 4px;
+        }
+
+        input[type="text"], input[type="number"], select, input[type="file"] {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: var(--nord2);
+            border: 1px solid var(--nord3);
+            color: var(--nord6);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: var(--nord8);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--nord5);
+            font-size: 14px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--nord10);
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            background-color: var(--nord10);
+            color: var(--nord6);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: background-color 0.2s, opacity 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--nord9);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.cancel-btn {
+            background-color: var(--nord11);
+        }
+        button.cancel-btn:hover:not(:disabled) {
+            background-color: #d06d76;
+        }
+
+        button.download-btn {
+            background-color: var(--nord14);
+            color: var(--nord0);
+            margin-top: 14px;
+            width: 100%;
+        }
+        button.download-btn:hover {
+            background-color: #b5d29d;
+        }
+
+        button.ping-btn {
+            flex: initial;
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+
+        .status-bar {
+            margin-top: 18px;
+            text-align: center;
+            color: var(--nord14);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .logs {
+            background-color: var(--nord0);
+            padding: 12px;
+            border-radius: 6px;
+            height: 160px;
+            overflow-y: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            color: var(--nord4);
+            margin-top: 14px;
+            border: 1px solid var(--nord3);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>YouTube Comment Extractor</h1>
+    <div class="subtitle">GitHub Pages Static Client &bull; Connects to Local or Remote Extraction Service</div>
+
+    <!-- Backend Configuration -->
+    <div class="endpoint-card">
+        <label for="apiUrl">Backend API Server Endpoint</label>
+        <div class="endpoint-row">
+            <span class="status-dot" id="statusDot" title="Backend Status"></span>
+            <input type="text" id="apiUrl" value="http://127.0.0.1:5000" placeholder="http://127.0.0.1:5000">
+            <button type="button" class="ping-btn" id="pingBtn">Test</button>
+        </div>
+        <div class="helper-text" id="endpointStatusText">Point to your local Docker container or desktop service.</div>
+    </div>
+
+    <form id="extractForm">
+        <div class="form-group">
+            <label for="url">YouTube Video URL</label>
+            <input type="text" id="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required>
+        </div>
+
+        <div class="form-group">
+            <label for="sort_mode">Sort Mode</label>
+            <select id="sort_mode" name="sort_mode">
+                <option value="0">Top Comments (Algorithm / Engagement)</option>
+                <option value="1">Newest First (Chronological)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="include_replies" name="include_replies" value="true" checked>
+                Include comment replies (Nested threads)
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label for="sample_strategy">Sampling Strategy</label>
+            <select id="sample_strategy" name="sample_strategy">
+                <option value="0">Extract All Available Comments (No Sampling)</option>
+                <option value="1">First N Comments (Quick Extract)</option>
+                <option value="2">Uniform Random Sample across Entire Video</option>
+                <option value="3">Stratified Sample by Thread</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="sampleSizeGroup" style="display: none;">
+            <label for="sample_size">Sample Size</label>
+            <input type="number" id="sample_size" name="sample_size" min="1" max="100000" value="100">
+            <div class="helper-text">Specifies how many comments to randomly or sequentially select.</div>
+        </div>
+
+        <div class="form-group">
+            <label for="cookies">Session Cookies (Optional, Netscape cookies.txt)</label>
+            <input type="file" id="cookies" name="cookies" accept=".txt">
+            <div class="helper-text">Required for age-restricted videos or member-only comments.</div>
+        </div>
+
+        <div class="button-group">
+            <button type="submit" id="startBtn">Start Extraction</button>
+            <button type="button" id="cancelBtn" class="cancel-btn hidden">Cancel Extraction</button>
+        </div>
+    </form>
+
+    <div class="status-bar" id="statusBar">Status: Ready</div>
+    <div class="logs" id="logsBox">Logs will appear here during extraction...</div>
+
+    <button id="downloadBtn" class="download-btn hidden">Download Comments (CSV)</button>
+</div>
+
+<script>
+    const form = document.getElementById('extractForm');
+    const apiUrlInput = document.getElementById('apiUrl');
+    const pingBtn = document.getElementById('pingBtn');
+    const statusDot = document.getElementById('statusDot');
+    const endpointStatusText = document.getElementById('endpointStatusText');
+    const startBtn = document.getElementById('startBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const statusBar = document.getElementById('statusBar');
+    const logsBox = document.getElementById('logsBox');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const strategySelect = document.getElementById('sample_strategy');
+    const sampleSizeGroup = document.getElementById('sampleSizeGroup');
+
+    // Restore saved API URL
+    const savedApiUrl = localStorage.getItem('yt_extractor_api_url');
+    if (savedApiUrl) {
+        apiUrlInput.value = savedApiUrl;
+    }
+
+    function getApiBase() {
+        return apiUrlInput.value.trim().replace(/\/+$/, '');
+    }
+
+    apiUrlInput.addEventListener('change', () => {
+        localStorage.setItem('yt_extractor_api_url', getApiBase());
+        checkBackendHealth();
+    });
+
+    strategySelect.addEventListener('change', () => {
+        if (strategySelect.value !== "0") {
+            sampleSizeGroup.style.display = 'block';
+        } else {
+            sampleSizeGroup.style.display = 'none';
+        }
+    });
+
+    let pollInterval = null;
+    let lastLogText = "";
+
+    async function checkBackendHealth() {
+        const base = getApiBase();
+        statusDot.className = 'status-dot';
+        endpointStatusText.textContent = "Checking connection...";
+        try {
+            const res = await fetch(`${base}/api/status`, { method: 'GET' });
+            if (res.ok) {
+                statusDot.className = 'status-dot online';
+                endpointStatusText.textContent = `Connected to service at ${base}`;
+                return true;
+            } else {
+                endpointStatusText.textContent = `Server responded with error status ${res.status}`;
+            }
+        } catch (e) {
+            endpointStatusText.textContent = `Cannot reach backend at ${base}. Make sure it is running.`;
+        }
+        return false;
+    }
+
+    pingBtn.addEventListener('click', checkBackendHealth);
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const base = getApiBase();
+        localStorage.setItem('yt_extractor_api_url', base);
+
+        startBtn.disabled = true;
+        cancelBtn.classList.remove('hidden');
+        cancelBtn.disabled = false;
+        downloadBtn.classList.add('hidden');
+        statusBar.innerText = "Status: Connecting to backend...";
+        logsBox.textContent = "Initializing extraction job...\n";
+        lastLogText = logsBox.textContent;
+
+        const formData = new FormData(form);
+
+        try {
+            const res = await fetch(`${base}/api/start`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (res.ok) {
+                statusBar.innerText = "Status: Connecting via yt-dlp...";
+                if (pollInterval) clearInterval(pollInterval);
+                pollInterval = setInterval(pollStatus, 1000);
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert(err.error || "An error occurred starting extraction.");
+                startBtn.disabled = false;
+                cancelBtn.classList.add('hidden');
+            }
+        } catch (err) {
+            console.error(err);
+            alert(`Network error contacting server at ${base}. Verify CORS & local network settings.`);
+            startBtn.disabled = false;
+            cancelBtn.classList.add('hidden');
+        }
+    });
+
+    cancelBtn.addEventListener('click', async () => {
+        cancelBtn.disabled = true;
+        try {
+            await fetch(`${getApiBase()}/api/cancel`, { method: 'POST' });
+        } catch (e) {
+            console.error(e);
+        }
+    });
+
+    async function pollStatus() {
+        const base = getApiBase();
+        try {
+            const res = await fetch(`${base}/api/status`);
+            const data = await res.json();
+
+            statusBar.innerText = `Status: ${data.status.toUpperCase()} | Progress: ${data.progress} comments`;
+
+            if (data.logs && data.logs.length > 0) {
+                const joined = data.logs.join('\n');
+                if (joined !== lastLogText) {
+                    lastLogText = joined;
+                    logsBox.textContent = joined;
+                    logsBox.scrollTop = logsBox.scrollHeight;
+                }
+            }
+
+            if (data.status === 'running') {
+                startBtn.disabled = true;
+                cancelBtn.classList.remove('hidden');
+                if (!pollInterval) {
+                    pollInterval = setInterval(pollStatus, 1000);
+                }
+            } else {
+                if (pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                }
+                startBtn.disabled = false;
+                cancelBtn.classList.add('hidden');
+                if (data.status === 'done' && data.total_comments > 0) {
+                    downloadBtn.classList.remove('hidden');
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    downloadBtn.addEventListener('click', () => {
+        window.location.href = `${getApiBase()}/api/download`;
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        checkBackendHealth();
+    });
+</script>
+</body>
+</html>

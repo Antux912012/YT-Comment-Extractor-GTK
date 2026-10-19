@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${ROOT_DIR}"
 
-VERSION="${1:-0.4}"
+VERSION="${1:-0.5}"
 
 # 1. Build yt-comment-extractor
 STAGE1="${ROOT_DIR}/build/deb_yt_gtk"
@@ -38,6 +38,7 @@ Description: YouTube Comment Extractor (GTK4 / Libadwaita)
  sampling and CSV export.
 EOF
 
+chmod 755 "${STAGE1}/DEBIAN"
 dpkg-deb --build --root-owner-group "${STAGE1}" "${ROOT_DIR}/yt-comment-extractor_${VERSION}_all.deb"
 rm -rf "${STAGE1}"
 
@@ -45,6 +46,7 @@ rm -rf "${STAGE1}"
 STAGE2="${ROOT_DIR}/build/deb_yt_service"
 rm -rf "${STAGE2}"
 mkdir -p "${STAGE2}/DEBIAN" "${STAGE2}/usr/bin" "${STAGE2}/usr/share/applications" "${STAGE2}/usr/share/icons/hicolor/scalable/apps" "${STAGE2}/usr/share/yt-extractor-service/templates"
+chmod 755 "${STAGE2}/DEBIAN"
 
 cat <<'EOF' > "${STAGE2}/usr/bin/start-yt-extractor-service"
 #!/usr/bin/env bash
