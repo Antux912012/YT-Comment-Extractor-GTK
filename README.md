@@ -72,17 +72,17 @@ To run the application locally without Flatpak:
 
 ## Version
 
-Current version: **0.2ac**
+Current version: **0.3**
 
 ## Academic Research & PhD Thesis
 
 The core algorithm for comment extraction and randomization implemented in this software constitutes a fundamental part of an ongoing PhD Thesis. 
-Unlike standard API-based approaches, this tool utilizes a custom extraction pipeline designed to mitigate data truncation and API biases. 
+Unlike standard API-based approaches, this tool utilizes a custom `yt-dlp` extraction pipeline designed to mitigate data truncation and API biases. 
 Furthermore, the advanced randomization and sampling strategies were specifically engineered to provide statistically rigorous and unbiased datasets for academic research in social sciences and data analysis.
 
 ### Algorithmic Methodology: Unbiased Extraction
 
-To ensure that the dataset is not subject to arbitrary truncation by standard APIs, the extraction engine utilizes a robust generator pattern. This design allows for continuous stream-processing of comments directly from YouTube's internal structures.
+To ensure that the dataset is not subject to arbitrary truncation by external APIs, the extraction engine utilizes a streaming generator pattern built directly on `yt-dlp`. This design allows for continuous stream-processing of comments with full control over sorting (`top` vs `new`) and reply inclusion.
 
 Crucially, the algorithm implements a strict de-biasing filter to separate top-level comments from nested discussion threads (replies). This prevents highly active, localized sub-conversations from skewing the overall dataset.
 
@@ -97,24 +97,25 @@ def get_comments_scraper_gen(
     stop_event=None
 ):
     """
-    Generator yielding live progress logs and returning extracted comments.
+    Generator yielding live progress logs and returning extracted comments exclusively via yt-dlp.
     Guarantees no arbitrary text truncation and supports reply filtering to eliminate bias.
     """
-    # ... Initialization and Setup ...
-    
-    for comment in gen:
+    # ... yt-dlp configuration and comment stream initialization ...
+
+    for c in comment_stream:
         # 1. Stop Event Hook for controlled interruption
         if stop_event and stop_event.is_set():
             # ... abort logic ...
             return
 
-        text = comment.get('text', '').strip()
+        text = (c.get('text') or '').strip()
         if not text:
             continue
 
-        cid = comment.get('cid', '')
+        cid = str(c.get('id') or c.get('cid') or '')
+        parent = c.get('parent')
         # 2. De-biasing filter: Identify if the comment is a nested reply
-        is_reply = comment.get('reply', False) or ('.' in cid)
+        is_reply = (parent != 'root') if parent is not None else ('.' in cid)
 
         # 3. Exclude replies if requested to maintain a strict top-level pool
         if is_reply and not include_replies:

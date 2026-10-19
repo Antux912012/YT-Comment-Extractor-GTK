@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Comment Extractor Web</title>
+    <title>YouTube Comment Extractor Web v0.3</title>
     <style>
         /* Nord Palette Colors */
         :root {
@@ -157,6 +157,7 @@
             background-color: var(--nord14);
             color: var(--nord0);
             margin-top: 14px;
+            width: 100%;
         }
         button.download-btn:hover {
             background-color: #b5d29d;
@@ -182,6 +183,8 @@
             margin-top: 16px;
             border: 1px solid var(--nord2);
             line-height: 1.4;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
 
         .hidden { display: none !important; }
@@ -190,8 +193,8 @@
 <body>
 
 <div class="container">
-    <h1>YouTube Comment Extractor</h1>
-    <div class="subtitle">University Research & Data Mining Service</div>
+    <h1>YouTube Comment Extractor v0.3</h1>
+    <div class="subtitle">University Research &amp; Data Mining Service (yt-dlp Engine)</div>
     <div class="info-pill">
         <span>🌐 mDNS: <strong>yt-extractor.local:5000</strong></span>
         <span>💻 LAN IP: <strong>{{ local_ip }}:5000</strong></span>
@@ -204,7 +207,7 @@
         </div>
 
         <div class="form-group">
-            <label for="sort_mode">Sort Order on YouTube</label>
+            <label for="sort_mode">Sort Order on YouTube (yt-dlp)</label>
             <select name="sort_mode" id="sort_mode">
                 <option value="0">Top Comments / Relevant</option>
                 <option value="1">Newest First</option>
@@ -212,11 +215,11 @@
         </div>
 
         <div class="form-group">
-            <label for="strategy_idx">Sampling & De-biasing Strategy</label>
+            <label for="strategy_idx">Sampling &amp; De-biasing Strategy</label>
             <select name="strategy_idx" id="strategy_idx">
                 <option value="0">Extract All Comments (Exhaustive Scan)</option>
                 <option value="1" selected>Unbiased Random Sample (Full Pool)</option>
-                <option value="2">Fast Random Sample (Pool: 2,000)</option>
+                <option value="2">Fast Random Sample (Bounded Pool)</option>
                 <option value="3">Sequential (First N Comments as Ordered)</option>
             </select>
         </div>
@@ -228,7 +231,7 @@
 
         <div class="form-group" id="pool_size_div" style="display:none;">
             <label for="pool_size">Custom Pool Scan Size</label>
-            <input type="number" name="pool_size" id="pool_size" value="2000" min="100">
+            <input type="number" name="pool_size" id="pool_size" value="2000" min="50" max="500000">
         </div>
 
         <div class="form-group">
@@ -268,20 +271,24 @@
     const downloadBtn = document.getElementById('downloadBtn');
 
     let pollInterval = null;
+    let lastLogText = '';
 
-    strategySelect.addEventListener('change', (e) => {
-        const val = e.target.value;
+    function updateStrategyFields() {
+        const val = strategySelect.value;
         if (val === "0") {
             sampleSizeDiv.style.display = 'none';
             poolSizeDiv.style.display = 'none';
-        } else if (val === "1" || val === "3") {
-            sampleSizeDiv.style.display = 'block';
-            poolSizeDiv.style.display = 'none';
         } else if (val === "2") {
+            sampleSizeDiv.style.display = 'block';
+            poolSizeDiv.style.display = 'block';
+        } else {
             sampleSizeDiv.style.display = 'block';
             poolSizeDiv.style.display = 'none';
         }
-    });
+    }
+
+    strategySelect.addEventListener('change', updateStrategyFields);
+    updateStrategyFields();
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -289,7 +296,8 @@
         cancelBtn.classList.remove('hidden');
         cancelBtn.disabled = false;
         downloadBtn.classList.add('hidden');
-        logsBox.innerHTML = "[SYSTEM] Initializing request...";
+        logsBox.textContent = "[SYSTEM] Initializing yt-dlp extraction request...";
+        lastLogText = logsBox.textContent;
 
         const formData = new FormData(form);
 
@@ -300,7 +308,8 @@
             });
 
             if (res.ok) {
-                statusLabel.innerText = "Status: Connecting to YouTube...";
+                statusLabel.innerText = "Status: Connecting via yt-dlp...";
+                if (pollInterval) clearInterval(pollInterval);
                 pollInterval = setInterval(pollStatus, 1000);
             } else {
                 const err = await res.json();
@@ -333,12 +342,25 @@
             statusLabel.innerText = `Status: ${data.status.toUpperCase()} | Progress: ${data.progress} comments`;
 
             if (data.logs && data.logs.length > 0) {
-                logsBox.innerHTML = data.logs.join('<br>');
-                logsBox.scrollTop = logsBox.scrollHeight;
+                const joined = data.logs.join('\n');
+                if (joined !== lastLogText) {
+                    lastLogText = joined;
+                    logsBox.textContent = joined;
+                    logsBox.scrollTop = logsBox.scrollHeight;
+                }
             }
 
-            if (data.status === 'done' || data.status === 'error') {
-                clearInterval(pollInterval);
+            if (data.status === 'running') {
+                startBtn.disabled = true;
+                cancelBtn.classList.remove('hidden');
+                if (!pollInterval) {
+                    pollInterval = setInterval(pollStatus, 1000);
+                }
+            } else {
+                if (pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                }
                 startBtn.disabled = false;
                 cancelBtn.classList.add('hidden');
                 if (data.status === 'done' && data.total_comments > 0) {
@@ -349,6 +371,10 @@
             console.error(err);
         }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        pollStatus();
+    });
 </script>
 </body>
 </html>

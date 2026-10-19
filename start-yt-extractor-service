@@ -1,4 +1,7 @@
 #!/bin/bash
-export PYTHONPATH="/app/lib/python3.12/site-packages:/app/lib/python3.11/site-packages:/app/share/yt-extractor:$PYTHONPATH"
+for d in /app/lib/python*/site-packages; do
+    [ -d "$d" ] && PYTHONPATH="$d:${PYTHONPATH:-}"
+done
+export PYTHONPATH="/app/share/yt-extractor:${PYTHONPATH:-}"
 cd /app/share/yt-extractor
 exec python3 service_manager.py "$@"

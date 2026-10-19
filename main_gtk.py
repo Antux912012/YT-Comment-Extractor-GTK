@@ -52,7 +52,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
         self.settings = load_settings()
 
     def on_activate(self, app):
-        self.win = Adw.ApplicationWindow(application=app, title="YouTube Comment Extractor v0.2ac")
+        self.win = Adw.ApplicationWindow(application=app, title="YouTube Comment Extractor v0.3")
         self.win.set_default_size(840, 720)
 
         # Main Toast Overlay for GNOME-style notifications
@@ -107,13 +107,13 @@ class YouTubeCommentExtractorApp(Adw.Application):
         # -------------------------------------------------------------
         settings_group = Adw.PreferencesGroup(
             title="Extraction & Sampling Strategy",
-            description="Control comment ordering and prevent algorithmic bias."
+            description="Control comment ordering and prevent algorithmic bias using yt-dlp."
         )
         content_box.append(settings_group)
 
         # Sort Mode
         self.sort_combo = Adw.ComboRow(title="Order on YouTube")
-        self.sort_combo.set_subtitle("Sort order used when retrieving comments from YouTube")
+        self.sort_combo.set_subtitle("Sort order used when retrieving comments via yt-dlp")
         self.sort_model = Gtk.StringList.new(["Top Comments / Relevant", "Newest First"])
         self.sort_combo.set_model(self.sort_model)
         self.sort_combo.set_selected(self.settings.get("sort_order", 0))
@@ -125,7 +125,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
         self.sampling_model = Gtk.StringList.new([
             "Extract All Comments (Exhaustive Full Scan)",
             "Unbiased Random Sample (Full Video Pool)",
-            "Fast Random Sample (First 2,000 Pool)",
+            "Fast Random Sample (Bounded Pool)",
             "Sequential (First N Comments as Ordered)"
         ])
         self.sampling_combo.set_model(self.sampling_model)
@@ -134,11 +134,20 @@ class YouTubeCommentExtractorApp(Adw.Application):
         settings_group.add(self.sampling_combo)
 
         # Sample Size (N)
-        self.sample_size_row = Adw.SpinRow.new_with_range(1, 100000, 50)
+        self.sample_size_row = Adw.SpinRow.new_with_range(1, 100000, 1)
+        self.sample_size_row.set_digits(0)
         self.sample_size_row.set_title("Sample Size (N)")
-        self.sample_size_row.set_subtitle("Number of comments to include in the sample")
+        self.sample_size_row.set_subtitle("Number of comments to include in the final dataset")
         self.sample_size_row.set_value(float(self.settings.get("sample_size", 100)))
         settings_group.add(self.sample_size_row)
+
+        # Custom Pool Size (for Fast Random Sample)
+        self.pool_size_row = Adw.SpinRow.new_with_range(50, 500000, 100)
+        self.pool_size_row.set_digits(0)
+        self.pool_size_row.set_title("Pool Scan Limit")
+        self.pool_size_row.set_subtitle("Maximum comments to scan before random sampling")
+        self.pool_size_row.set_value(float(self.settings.get("pool_size", 2000)))
+        settings_group.add(self.pool_size_row)
 
         # Include Replies Switch
         self.replies_row = Adw.SwitchRow()
@@ -147,7 +156,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
         self.replies_row.set_active(self.settings.get("include_replies", True))
         settings_group.add(self.replies_row)
 
-        # Initialize sensitivity of sample size based on strategy
+        # Initialize sensitivity of sample/pool size based on strategy
         self.on_sampling_strategy_changed(self.sampling_combo, None)
 
         # -------------------------------------------------------------
@@ -264,6 +273,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
         idx = combo.get_selected()
         # 0 is "Extract All Comments (Exhaustive Full Scan)"
         self.sample_size_row.set_sensitive(idx != 0)
+        self.pool_size_row.set_visible(idx == 2)
 
     def on_browse_cookies(self, button):
         if hasattr(Gtk, 'FileDialog'):
@@ -343,25 +353,27 @@ class YouTubeCommentExtractorApp(Adw.Application):
         # Read configurations
         sort_mode = "recent" if self.sort_combo.get_selected() == 1 else "popular"
         strategy_idx = self.sampling_combo.get_selected()
-        sample_size = int(self.sample_size_row.get_value())
+        sample_size = max(1, int(self.sample_size_row.get_value()))
+        custom_pool = max(1, int(self.pool_size_row.get_value()))
         include_replies = self.replies_row.get_active()
 
         # Save settings for next launch
         self.settings["sort_order"] = self.sort_combo.get_selected()
         self.settings["sampling_strategy"] = strategy_idx
         self.settings["sample_size"] = sample_size
+        self.settings["pool_size"] = custom_pool
         self.settings["include_replies"] = include_replies
         save_settings(self.settings)
 
         # Determine extraction pool size
         # Strategy 0: All Comments (Exhaustive Scan)
         # Strategy 1: Unbiased Random Sample (Full Video Pool)
-        # Strategy 2: Fast Random Sample (First 2,000 Pool)
+        # Strategy 2: Fast Random Sample (Bounded Pool)
         # Strategy 3: Sequential (First N as Ordered)
         if strategy_idx in (0, 1):
             pool_size = None  # Full scan
         elif strategy_idx == 2:
-            pool_size = 2000
+            pool_size = max(custom_pool, sample_size)
         else:
             pool_size = sample_size
 
@@ -372,7 +384,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
         self.extract_btn.set_visible(False)
         self.cancel_btn.set_visible(True)
         self.export_btn.set_sensitive(False)
-        self.stats_label.set_text("Status: Initializing extraction task...")
+        self.stats_label.set_text("Status: Initializing yt-dlp extraction task...")
 
         # Spawn background extraction thread
         self.extraction_thread = threading.Thread(
@@ -389,11 +401,11 @@ class YouTubeCommentExtractorApp(Adw.Application):
 
     def run_extraction_worker(self, url, sort_mode, strategy_idx, sample_size, pool_size, include_replies):
         try:
-            GLib.idle_add(self.append_log, f"[TASK] Starting extraction for URL: {url}")
+            GLib.idle_add(self.append_log, f"[TASK] Starting yt-dlp extraction for URL: {url}")
             strategy_names = [
                 "Full Scan (All Comments)",
                 f"Unbiased Random Sample (Target: {sample_size})",
-                f"Fast Random Sample (Pool: 2,000, Target: {sample_size})",
+                f"Fast Random Sample (Pool: {pool_size}, Target: {sample_size})",
                 f"Sequential Ordered (Target: {sample_size})"
             ]
             GLib.idle_add(self.append_log, f"[CONFIG] Strategy: {strategy_names[strategy_idx]} | Include Replies: {include_replies}")
@@ -420,6 +432,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
                 if 'error' in chunk:
                     GLib.idle_add(self.append_log, f"[ERROR] {chunk['error']}")
                     GLib.idle_add(self.show_toast, chunk['error'])
+                    GLib.idle_add(self.stats_label.set_text, "Status: Extraction failed.")
                     GLib.idle_add(self.on_worker_finished, False, [])
                     return
                 if 'result' in chunk:
@@ -427,8 +440,14 @@ class YouTubeCommentExtractorApp(Adw.Application):
                     aborted = chunk.get('aborted', False)
 
             if not all_comments:
-                GLib.idle_add(self.append_log, "[ERROR] No comments were retrieved.")
-                GLib.idle_add(self.show_toast, "No comments found.")
+                if aborted:
+                    GLib.idle_add(self.append_log, "[ABORT] Extraction stopped before any comments were collected.")
+                    GLib.idle_add(self.stats_label.set_text, "Status: Extraction cancelled.")
+                    GLib.idle_add(self.show_toast, "Extraction cancelled.")
+                else:
+                    GLib.idle_add(self.append_log, "[ERROR] No comments were retrieved.")
+                    GLib.idle_add(self.stats_label.set_text, "Status: No comments found.")
+                    GLib.idle_add(self.show_toast, "No comments found.")
                 GLib.idle_add(self.on_worker_finished, False, [])
                 return
 
@@ -460,6 +479,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
 
         except Exception as e:
             GLib.idle_add(self.append_log, f"[FATAL] Extraction thread error: {e}")
+            GLib.idle_add(self.stats_label.set_text, "Status: Error occurred.")
             GLib.idle_add(self.on_worker_finished, False, [])
 
     def on_worker_finished(self, success, comments):
@@ -523,6 +543,8 @@ class YouTubeCommentExtractorApp(Adw.Application):
 
     def write_csv_file(self, filepath):
         try:
+            if not filepath.lower().endswith('.csv'):
+                filepath += '.csv'
             with open(filepath, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                 writer.writerow([
