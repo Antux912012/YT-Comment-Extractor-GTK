@@ -16,7 +16,7 @@ except ImportError:
 
 from scraper import get_comments_scraper_gen, extract_video_id
 
-APP_VERSION = "0.3"
+APP_VERSION = "0.4"
 
 
 def get_base_dir():
@@ -128,6 +128,10 @@ def run_extraction(url, sort_mode_str, strategy_idx, sample_size, pool_size, inc
                 )
                 final_comments = random.sample(all_comments, sample_size)
             else:
+                msg = f"[SAMPLE] Total collected ({len(all_comments)}) <= requested sample ({sample_size}). Keeping all {len(all_comments)} available comments."
+                if not include_replies:
+                    msg += " (Replies excluded per settings; all available top-level comments retrieved)."
+                extraction_state["logs"].append(msg)
                 final_comments = all_comments
         elif strategy_idx == 3 and sample_size > 0:
             final_comments = all_comments[:sample_size]

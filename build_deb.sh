@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${ROOT_DIR}"
 
-VERSION="${1:-0.3}"
+VERSION="${1:-0.4}"
 
 # 1. Build yt-comment-extractor
 STAGE1="${ROOT_DIR}/build/deb_yt_gtk"

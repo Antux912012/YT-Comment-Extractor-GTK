@@ -52,7 +52,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
         self.settings = load_settings()
 
     def on_activate(self, app):
-        self.win = Adw.ApplicationWindow(application=app, title="YouTube Comment Extractor v0.3")
+        self.win = Adw.ApplicationWindow(application=app, title="YouTube Comment Extractor v0.4")
         self.win.set_default_size(840, 720)
 
         # Main Toast Overlay for GNOME-style notifications
@@ -106,7 +106,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
         # Group 2: Extraction & Sampling Configuration
         # -------------------------------------------------------------
         settings_group = Adw.PreferencesGroup(
-            title="Extraction & Sampling Strategy",
+            title="Extraction &amp; Sampling Strategy",
             description="Control comment ordering and prevent algorithmic bias using yt-dlp."
         )
         content_box.append(settings_group)
@@ -163,7 +163,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
         # Group 3: Authentication & Cookies (Optional)
         # -------------------------------------------------------------
         auth_group = Adw.PreferencesGroup(
-            title="Authentication & Cookies (Optional)",
+            title="Authentication &amp; Cookies (Optional)",
             description="Netscape cookies.txt is required for age-restricted or private videos."
         )
         content_box.append(auth_group)
@@ -460,10 +460,10 @@ class YouTubeCommentExtractorApp(Adw.Application):
                     )
                     selected_comments = random.sample(all_comments, sample_size)
                 else:
-                    GLib.idle_add(
-                        self.append_log,
-                        f"[SAMPLE] Total pool ({len(all_comments)}) <= requested sample ({sample_size}). Keeping all comments."
-                    )
+                    note = f"[SAMPLE] Total collected ({len(all_comments)}) <= requested sample ({sample_size}). Keeping all {len(all_comments)} available comments."
+                    if not include_replies:
+                        note += " (Replies excluded per settings; all available top-level comments retrieved)."
+                    GLib.idle_add(self.append_log, note)
                     selected_comments = all_comments
             elif strategy_idx == 3:
                 selected_comments = all_comments[:sample_size]
