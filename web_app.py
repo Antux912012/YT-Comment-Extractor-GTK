@@ -62,7 +62,6 @@ def get_local_ip():
 
 
 def run_extraction(url, sort_mode_str, strategy_idx, sample_size, pool_size, include_replies, cookies_path):
-    global extraction_state, stop_event
     with extraction_lock:
         extraction_state["status"] = "running"
         extraction_state["comments"] = []
@@ -200,7 +199,6 @@ def api_start():
 
 @app.route('/api/cancel', methods=['POST'])
 def api_cancel():
-    global stop_event
     if extraction_state["status"] == "running":
         stop_event.set()
         extraction_state["logs"].append("[USER] Cancel requested. Finalizing collected comments...")
