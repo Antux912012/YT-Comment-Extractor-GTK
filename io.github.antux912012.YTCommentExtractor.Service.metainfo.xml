@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.antux912012.YTCommentExtractor.Service</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>YouTube Comment Extractor Service</name>
+  <summary>Background web server and system tray service for YouTube Comment Extractor</summary>
+  <description>
+    <p>Background web server and system tray indicator service for YouTube Comment Extractor, providing a local browser dashboard for automated comment scraping and analysis.</p>
+  </description>
+  <launchable type="desktop-id">io.github.antux912012.YTCommentExtractor.Service.desktop</launchable>
+  <url type="homepage">https://github.com/Antux912012/YT-Comment-Extractor-GTK</url>
+  <developer id="io.github.antux912012">
+    <name>Antonio</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <provides>
+    <binary>service_manager</binary>
+  </provides>
+  <releases>
+    <release version="0.6" date="2026-10-20"/>
+  </releases>
+</component>

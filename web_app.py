@@ -17,7 +17,7 @@ except ImportError:
 from exporters import export_to_csv, export_to_html, export_to_json
 from scraper import apply_sampling, calculate_pool_size, extract_video_id, get_comments_scraper_gen
 
-APP_VERSION = "0.5"
+APP_VERSION = "0.6"
 
 
 def get_base_dir():
@@ -167,6 +167,21 @@ def run_extraction(url, sort_mode_str, strategy_idx, sample_size, pool_size, inc
 @app.route('/')
 def index():
     return render_template('index.html', local_ip=get_local_ip(), version=APP_VERSION)
+
+
+@app.route('/icon.png')
+@app.route('/favicon.ico')
+def app_icon():
+    base = get_base_dir()
+    for candidate in [
+        os.path.join(base, "icon.png"),
+        os.path.join(base, "icons", "icon_128x128.png"),
+        "/usr/share/yt-extractor-service/icon.png",
+        "/app/share/yt-extractor/icon.png"
+    ]:
+        if os.path.exists(candidate):
+            return send_file(candidate, mimetype='image/png')
+    return ('', 404)
 
 
 @app.route('/api/start', methods=['POST'])

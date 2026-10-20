@@ -1,10 +1,14 @@
+<p align="center">
+  <img src="icons/icon_128x128.png" width="128" height="128" alt="YouTube Comment Extractor Logo" />
+</p>
+
 # YouTube Comment Extractor
 
 A native GTK4/Libadwaita application for Linux that allows users to extract comments from YouTube videos. The application leverages `yt-dlp` to bypass YouTube API restrictions and provides various sampling strategies for efficient data extraction.
 
 ## Features
 
-- **GTK4/Libadwaita UI**: Seamless integration with modern Linux desktops.
+- **GTK4/Libadwaita UI**: Seamless integration with modern GNOME desktops, including full GNOME Human Interface Guidelines (HIG) compliant multi-resolution and symbolic icon suite.
 - **`yt-dlp` Streaming Engine**: Directly parses comments, avoiding YouTube Data API quotas or keys in the desktop/service editions.
 - **Advanced Sampling Strategies**: Support for uniform random sampling, bounded pool sampling, sequential ordering, and full exhaustive extraction.
 - **De-biasing Filter**: Option to isolate top-level comments and exclude discussion reply threads to prevent conversation-density bias in research datasets.
@@ -83,7 +87,7 @@ To run the application locally without Flatpak:
 
 ## Version
 
-Current version: **0.5**
+Current version: **0.6**
 
 ## Academic Research & PhD Thesis
 

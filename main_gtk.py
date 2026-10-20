@@ -9,7 +9,7 @@ import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gio, GLib, Gtk
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 from exporters import export_to_csv, export_to_html, export_to_json
 from scraper import (
@@ -58,7 +58,16 @@ class YouTubeCommentExtractorApp(Adw.Application):
         self.settings = load_settings()
 
     def on_activate(self, app):
-        self.win = Adw.ApplicationWindow(application=app, title="YouTube Comment Extractor v0.5")
+        display = Gdk.Display.get_default()
+        if display:
+            icon_theme = Gtk.IconTheme.get_for_display(display)
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            for p in [base_dir, os.path.join(base_dir, "icons")]:
+                if os.path.exists(p):
+                    icon_theme.add_search_path(p)
+
+        self.win = Adw.ApplicationWindow(application=app, title="YouTube Comment Extractor v0.6")
+        self.win.set_icon_name("io.github.antux912012.YTCommentExtractor")
         self.win.set_default_size(840, 720)
 
         # Main Toast Overlay for GNOME-style notifications

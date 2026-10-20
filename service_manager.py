@@ -68,7 +68,7 @@ def show_info_dialog():
     local_ip = get_local_ip()
     if LAN_MODE:
         msg = (
-            "YouTube Comment Extractor Web Service v0.5 is running (LAN mode)!\n\n"
+            "YouTube Comment Extractor Web Service v0.6 is running (LAN mode)!\n\n"
             "• Local Machine:   http://127.0.0.1:5000\n"
             "• Local Network:   http://yt-extractor.local:5000\n"
             f"• Direct LAN IP:   http://{local_ip}:5000\n\n"
@@ -76,7 +76,7 @@ def show_info_dialog():
         )
     else:
         msg = (
-            "YouTube Comment Extractor Web Service v0.5 is running (Loopback mode)!\n\n"
+            "YouTube Comment Extractor Web Service v0.6 is running (Loopback mode)!\n\n"
             "• Local Machine:   http://127.0.0.1:5000\n\n"
             "Service bound to 127.0.0.1 for local security. Pass --lan to expose on LAN.\n"
             "You can manage the service anytime via the system tray icon."
@@ -84,14 +84,14 @@ def show_info_dialog():
     try:
         subprocess.Popen([
             'zenity', '--info',
-            '--title=YouTube Comment Extractor Service v0.5',
+            '--title=YouTube Comment Extractor Service v0.6',
             f'--text={msg}'
         ])
     except Exception:
         try:
             subprocess.Popen([
                 'notify-send',
-                'YouTube Comment Extractor Service v0.5',
+                'YouTube Comment Extractor Service v0.6',
                 msg
             ])
         except Exception:
@@ -113,7 +113,7 @@ def start_server(notify=True):
     with state_lock:
         if server_instance is not None:
             if notify:
-                show_message_dialog("YT Extractor Service v0.5", "The service is already running.")
+                show_message_dialog("YT Extractor Service v0.6", "The service is already running.")
             return
 
         bind_host = '0.0.0.0' if LAN_MODE else '127.0.0.1'
@@ -124,7 +124,7 @@ def start_server(notify=True):
             err_msg = f"Could not bind to port 5000 ({e}). Another instance may already be running."
             print(f"[Server Error] {err_msg}")
             if notify:
-                show_message_dialog("YT Extractor Service v0.5", err_msg)
+                show_message_dialog("YT Extractor Service v0.6", err_msg)
             return
 
         if LAN_MODE:
@@ -148,7 +148,7 @@ def stop_server(notify=True):
     with state_lock:
         if server_instance is None:
             if notify:
-                show_message_dialog("YT Extractor Service v0.5", "The service is already stopped.")
+                show_message_dialog("YT Extractor Service v0.6", "The service is already stopped.")
             return
 
         if zeroconf_instance:
@@ -176,7 +176,7 @@ def stop_server(notify=True):
             thr.join(timeout=2.0)
 
     if notify:
-        show_message_dialog("YT Extractor Service v0.5", "Service has been stopped.")
+        show_message_dialog("YT Extractor Service v0.6", "Service has been stopped.")
 
 
 def restart_server():
@@ -184,7 +184,7 @@ def restart_server():
     time.sleep(0.3)
     start_server(notify=False)
     if server_instance is not None:
-        show_message_dialog("YT Extractor Service v0.5", "Service restarted successfully!")
+        show_message_dialog("YT Extractor Service v0.6", "Service restarted successfully!")
 
 
 def on_open_browser(icon, item):
@@ -219,6 +219,8 @@ def get_icon():
     for candidate in [
         os.path.join(base, "icon.png"),
         os.path.join(base, "YTCommentExtractor.png"),
+        os.path.join(base, "icons", "icon_128x128.png"),
+        os.path.join(base, "icons", "icon_256x256.png"),
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png"),
         "/usr/share/yt-extractor-service/icon.png",
         "/app/share/yt-extractor/icon.png"
@@ -255,7 +257,7 @@ if __name__ == '__main__':
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit", on_quit)
         )
-        tray_icon = pystray.Icon("YTCommentExtractorService", icon_img, "YT Comment Extractor Web Service v0.5", menu)
+        tray_icon = pystray.Icon("YTCommentExtractorService", icon_img, "YT Comment Extractor Web Service v0.6", menu)
         try:
             tray_icon.run()
         except Exception as e:
@@ -267,7 +269,7 @@ if __name__ == '__main__':
                 stop_server(notify=False)
     else:
         bind_host = "0.0.0.0" if LAN_MODE else "127.0.0.1"
-        print(f"Running YT Comment Extractor Web Service v0.5 in headless mode on {bind_host}:5000")
+        print(f"Running YT Comment Extractor Web Service v0.6 in headless mode on {bind_host}:5000")
         try:
             while True:
                 time.sleep(1)

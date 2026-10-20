@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.antux912012.YTCommentExtractor</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>YouTube Comment Extractor</name>
+  <summary>Extract and analyze YouTube video comments with GTK4 and Libadwaita</summary>
+  <description>
+    <p>A native GTK4/Libadwaita application for Linux that allows users to extract, filter, export, and analyze comments from YouTube videos. Features advanced sampling strategies (uniform random, bounded pool, sequential) and multi-format exports (CSV with emojis, formatted JSON, YouTube-styled HTML).</p>
+  </description>
+  <launchable type="desktop-id">io.github.antux912012.YTCommentExtractor.desktop</launchable>
+  <url type="homepage">https://github.com/Antux912012/YT-Comment-Extractor-GTK</url>
+  <developer id="io.github.antux912012">
+    <name>Antonio</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <provides>
+    <binary>start-yt-extractor</binary>
+  </provides>
+  <releases>
+    <release version="0.6" date="2026-10-20">
+      <description>
+        <p>Updated app icons conforming with GNOME Human Interface Guidelines, multi-resolution icon theme packages, and multi-format export parity.</p>
+      </description>
+    </release>
+  </releases>
+</component>

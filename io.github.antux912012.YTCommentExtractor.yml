@@ -30,7 +30,10 @@ modules:
       - cp scraper.py exporters.py main_gtk.py /app/share/yt-extractor/
       - install -D start-yt-extractor /app/bin/start-yt-extractor
       - install -D io.github.antux912012.YTCommentExtractor.desktop /app/share/applications/io.github.antux912012.YTCommentExtractor.desktop
+      - install -D io.github.antux912012.YTCommentExtractor.metainfo.xml /app/share/metainfo/io.github.antux912012.YTCommentExtractor.metainfo.xml
       - install -D io.github.antux912012.YTCommentExtractor.svg /app/share/icons/hicolor/scalable/apps/io.github.antux912012.YTCommentExtractor.svg
+      - install -D io.github.antux912012.YTCommentExtractor-symbolic.svg /app/share/icons/hicolor/symbolic/apps/io.github.antux912012.YTCommentExtractor-symbolic.svg
+      - for s in 16 24 32 48 64 128 256 512; do install -D icons/icon_${s}x${s}.png /app/share/icons/hicolor/${s}x${s}/apps/io.github.antux912012.YTCommentExtractor.png; done
     sources:
       - type: dir
         path: .

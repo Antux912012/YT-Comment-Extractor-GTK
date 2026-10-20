@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: yt-comment-extractor-service:0.5
+    image: yt-comment-extractor-service:0.6
     container_name: yt-extractor-service
     restart: unless-stopped
     ports:
