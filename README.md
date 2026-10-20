@@ -5,10 +5,20 @@ A native GTK4/Libadwaita application for Linux that allows users to extract comm
 ## Features
 
 - **GTK4/Libadwaita UI**: Seamless integration with modern Linux desktops.
-- **`yt-dlp` Integration**: Directly parses comments, avoiding YouTube Data API quotas or keys.
-- **Advanced Sampling**: Support for uniform sampling, head-and-tail limits, and probabilistic sampling.
-- **Cookies Support**: Pass `cookies.txt` to access restricted content.
-- **CSV Export**: Extract results into a cleanly formatted CSV file.
+- **`yt-dlp` Streaming Engine**: Directly parses comments, avoiding YouTube Data API quotas or keys in the desktop/service editions.
+- **Advanced Sampling Strategies**: Support for uniform random sampling, bounded pool sampling, sequential ordering, and full exhaustive extraction.
+- **De-biasing Filter**: Option to isolate top-level comments and exclude discussion reply threads to prevent conversation-density bias in research datasets.
+- **Session Cookies Support**: Pass Netscape `cookies.txt` to access restricted, age-gated, or private content.
+- **Multi-Format Exporters**:
+  - **CSV (`.csv`)**: RFC 4180 compliant with UTF-8 BOM (`utf-8-sig`) to natively preserve emojis (`🔥`, `❤️`, `👍`, `🚀`) and international symbols in Excel, LibreOffice, and data science pipelines.
+  - **JSON (`.json`)**: Formatted hierarchical dataset including video metadata and Unicode emoji symbols (`ensure_ascii=False`).
+  - **NDJSON (`.ndjson`)**: Newline-delimited JSON stream for large-scale data ingestion.
+  - **Interactive HTML (`.html`)**: Standalone, responsive web export styled authentically like YouTube's comments UI with user avatars, likes/replies metrics, collapsible reply threads, and real-time client-side search.
+- **Static Web Client (GitHub Pages SPA)**:
+  - 100% static client-side single-page application with zero backend.
+  - Dual fetch engines: Official YouTube Data API v3 or Keyless Innertube via CORS proxy.
+  - Inline Web Worker for pagination concurrency without UI lag.
+  - Client-side IndexedDB caching (`yt_comments_db`) preventing memory exhaustion on $>50\text{k}$ comments.
 
 ## Installation
 
@@ -63,12 +73,13 @@ To run the application locally without Flatpak:
 
 ## Usage
 
-1. Paste a YouTube Video URL.
+1. Paste a YouTube Video URL or Video ID.
 2. Select your sorting preference (Top comments or Newest first).
-3. Choose a sampling strategy (All comments, Head/Tail limits, Random uniform).
+3. Choose a sampling strategy (All comments, Unbiased Random Sample, Fast Random Sample, or Sequential).
 4. Provide a `cookies.txt` if the video is age-restricted or private.
-5. Click **Extract Comments**.
-6. Review the logs and, once finished, click **Export to CSV**.
+5. Click **Start Extraction**.
+6. Review the live telemetry and execution monitor logs.
+7. Once finished, click **Export CSV**, **Export JSON**, or **Export HTML** as needed.
 
 ## Version
 
@@ -130,29 +141,36 @@ Once the baseline pool of comments is extracted, the system applies predefined s
 
 The implementation relies on Python's cryptographically secure pseudo-random number generator (through `random.sample`) for uniform sampling, guaranteeing that every comment in the extracted pool has an equal probability of being selected.
 
-**Randomization & Sampling Logic (`web_app.py` / `main_gtk.py`):**
+**Centralized Randomization & Sampling Implementation (`scraper.py`):**
 ```python
-# Strategy 0: Full scan (All comments)
-# Strategy 1: Unbiased Random Sample (Full pool)
-# Strategy 2: Fast Random Sample (2,000 pool)
-# Strategy 3: Sequential (First N)
+def apply_sampling(all_comments, strategy_idx, sample_size, include_replies=True):
+    """
+    Applies the selected sampling strategy to the collected comments pool:
+    - Strategy 0: Exhaustive Full Scan (All comments)
+    - Strategy 1: Unbiased Random Sample (Full pool)
+    - Strategy 2: Fast Random Sample (Bounded pool)
+    - Strategy 3: Sequential (First N comments)
+    """
+    if not all_comments:
+        return [], None
 
-# Apply sampling strategy
-if strategy_idx in (1, 2) and sample_size > 0:
-    if len(all_comments) > sample_size:
-        extraction_state["logs"].append(
-            f"[SAMPLE] Applying uniform random sampling: selecting {sample_size} from {len(all_comments)} comments."
-        )
-        # Uses random.sample for statistically rigorous, unbiased uniform sampling without replacement
-        final_comments = random.sample(all_comments, sample_size)
+    if strategy_idx in (1, 2) and sample_size > 0:
+        if len(all_comments) > sample_size:
+            msg = (
+                f"[SAMPLE] Applying uniform random sampling: selecting {sample_size} "
+                f"from total pool of {len(all_comments)} comments."
+            )
+            # Uses random.sample for statistically rigorous, unbiased uniform sampling without replacement
+            return random.sample(all_comments, sample_size), msg
+        else:
+            msg = f"[SAMPLE] Total collected ({len(all_comments)}) <= requested sample ({sample_size})."
+            return all_comments, msg
+    elif strategy_idx == 3 and sample_size > 0:
+        # Sequential ordering for temporal analysis
+        return all_comments[:sample_size], None
     else:
-        final_comments = all_comments
-elif strategy_idx == 3 and sample_size > 0:
-    # Sequential ordering for temporal analysis
-    final_comments = all_comments[:sample_size]
-else:
-    # Exhaustive collection
-    final_comments = all_comments
+        # Exhaustive collection
+        return all_comments, None
 ```
 
 These methodological choices guarantee that datasets generated by this tool meet the stringent data provenance and bias-mitigation requirements expected in peer-reviewed scientific literature.

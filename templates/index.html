@@ -153,14 +153,42 @@
             background-color: #d06d76;
         }
 
-        button.download-btn {
+        .export-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .download-btn {
+            flex: 1;
+            padding: 12px 8px;
             background-color: var(--nord14);
             color: var(--nord0);
-            margin-top: 14px;
-            width: 100%;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+            transition: background-color 0.2s;
+            display: inline-block;
+            box-sizing: border-box;
         }
-        button.download-btn:hover {
+        .download-btn:hover {
             background-color: #b5d29d;
+        }
+        .download-btn.json-btn {
+            background-color: var(--nord8);
+        }
+        .download-btn.json-btn:hover {
+            background-color: #9cd4e3;
+        }
+        .download-btn.html-btn {
+            background-color: var(--nord13);
+        }
+        .download-btn.html-btn:hover {
+            background-color: #f2d59d;
         }
 
         .status-bar {
@@ -256,7 +284,11 @@
     <div class="status-bar" id="statusLabel">Status: Idle</div>
     <div class="logs" id="logsBox">System logs will appear here during extraction...</div>
 
-    <button id="downloadBtn" class="download-btn hidden" onclick="window.location='/api/download'">Export to CSV</button>
+    <div id="exportGroup" class="export-group hidden">
+        <a id="downloadCsv" href="/api/download?format=csv" class="download-btn" title="Download CSV spreadsheet (keeps emoji symbols)">Export CSV</a>
+        <a id="downloadJson" href="/api/download?format=json" class="download-btn json-btn" title="Download formatted JSON dataset">Export JSON</a>
+        <a id="downloadHtml" href="/api/download?format=html" class="download-btn html-btn" title="Download interactive HTML styled like YouTube">Export HTML</a>
+    </div>
 </div>
 
 <script>
@@ -268,7 +300,7 @@
     const poolSizeDiv = document.getElementById('pool_size_div');
     const statusLabel = document.getElementById('statusLabel');
     const logsBox = document.getElementById('logsBox');
-    const downloadBtn = document.getElementById('downloadBtn');
+    const exportGroup = document.getElementById('exportGroup');
 
     let pollInterval = null;
     let lastLogText = '';
@@ -295,7 +327,7 @@
         startBtn.disabled = true;
         cancelBtn.classList.remove('hidden');
         cancelBtn.disabled = false;
-        downloadBtn.classList.add('hidden');
+        exportGroup.classList.add('hidden');
         logsBox.textContent = "[SYSTEM] Initializing yt-dlp extraction request...";
         lastLogText = logsBox.textContent;
 
@@ -364,7 +396,7 @@
                 startBtn.disabled = false;
                 cancelBtn.classList.add('hidden');
                 if (data.status === 'done' && data.total_comments > 0) {
-                    downloadBtn.classList.remove('hidden');
+                    exportGroup.classList.remove('hidden');
                 }
             }
         } catch (err) {

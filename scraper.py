@@ -1,7 +1,8 @@
 import os
+import random
 import re
-from urllib.parse import urlparse, parse_qs
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+from urllib.parse import parse_qs, urlparse
 
 try:
     import yt_dlp
@@ -133,6 +134,51 @@ def get_comment_date(comment):
     return None
 
 
+def calculate_pool_size(strategy_idx, sample_size, custom_pool=2000):
+    """
+    Determines the pool scan limit for yt-dlp based on the sampling strategy:
+    0: Exhaustive Full Scan -> None
+    1: Unbiased Random Sample (Full Video Pool) -> None
+    2: Fast Random Sample (Bounded Pool) -> max(custom_pool, sample_size)
+    3: Sequential (First N Comments as Ordered) -> sample_size
+    """
+    if strategy_idx in (0, 1):
+        return None
+    if strategy_idx == 2:
+        pool = custom_pool if (custom_pool and custom_pool > 0) else 2000
+        return max(pool, sample_size)
+    return max(1, sample_size)
+
+
+def apply_sampling(all_comments, strategy_idx, sample_size, include_replies=True):
+    """
+    Applies the selected sampling strategy to the collected comments pool.
+    Returns a tuple of (selected_comments, optional_log_message).
+    """
+    if not all_comments:
+        return [], None
+
+    if strategy_idx in (1, 2) and sample_size > 0:
+        if len(all_comments) > sample_size:
+            msg = (
+                f"[SAMPLE] Applying uniform random sampling: selecting {sample_size} "
+                f"from total pool of {len(all_comments)} comments."
+            )
+            return random.sample(all_comments, sample_size), msg
+        else:
+            msg = (
+                f"[SAMPLE] Total collected ({len(all_comments)}) <= requested sample ({sample_size}). "
+                f"Keeping all {len(all_comments)} available comments."
+            )
+            if not include_replies:
+                msg += " (Replies excluded per settings; all available top-level comments retrieved)."
+            return all_comments, msg
+    elif strategy_idx == 3 and sample_size > 0:
+        return all_comments[:sample_size], None
+    else:
+        return all_comments, None
+
+
 def get_comments_scraper_gen(
     video_url,
     max_comments=None,
@@ -155,6 +201,12 @@ def get_comments_scraper_gen(
         return
 
     normalized_url = f"https://www.youtube.com/watch?v={video_id}"
+    video_meta = {
+        'video_id': video_id,
+        'video_url': normalized_url,
+        'title': f"YouTube Video ({video_id})",
+        'channel': '',
+    }
     all_comments = []
     comments_by_cid = {}
     pending_reply_counts = {}
@@ -212,7 +264,8 @@ def get_comments_scraper_gen(
                 yield {
                     'result': [],
                     'aborted': True,
-                    'stats': {'total': 0, 'top_level': 0, 'replies': 0}
+                    'stats': {'total': 0, 'top_level': 0, 'replies': 0},
+                    'video_info': video_meta
                 }
                 return
 
@@ -222,8 +275,15 @@ def get_comments_scraper_gen(
                 return
 
             video_title = info.get('title')
+            channel_name = info.get('uploader') or info.get('channel') or ''
+            video_meta = {
+                'video_id': video_id,
+                'video_url': normalized_url,
+                'title': video_title or f"YouTube Video ({video_id})",
+                'channel': channel_name,
+            }
             if video_title:
-                yield {'log': f'[INFO] Video: "{video_title}"'}
+                yield {'log': f'[INFO] Video: "{video_title}"', 'video_info': video_meta}
 
             comment_stream = gen_holder.get('gen')
             if comment_stream is None:
@@ -243,7 +303,8 @@ def get_comments_scraper_gen(
                         yield {
                             'result': all_comments,
                             'aborted': True,
-                            'stats': {'total': len(all_comments), 'top_level': top_level_count, 'replies': reply_count}
+                            'stats': {'total': len(all_comments), 'top_level': top_level_count, 'replies': reply_count},
+                            'video_info': video_meta
                         }
                         return
 
@@ -269,12 +330,14 @@ def get_comments_scraper_gen(
                         reply_count += 1
                         parent_cid = str(parent) if (parent and parent != 'root') else cid.split('.')[0]
                         root_cid = parent_cid.split('.')[0]
+                        parent_id = parent_cid
                         if root_cid in comments_by_cid:
                             comments_by_cid[root_cid]['reply_count'] += 1
                         else:
                             pending_reply_counts[root_cid] = pending_reply_counts.get(root_cid, 0) + 1
                     else:
                         top_level_count += 1
+                        parent_id = None
 
                     likes = c.get('like_count') if 'like_count' in c else c.get('votes')
                     votes_str = str(likes if likes is not None else 0)
@@ -286,12 +349,14 @@ def get_comments_scraper_gen(
 
                     entry = {
                         'cid': cid,
+                        'parent_id': parent_id,
                         'nickname': c.get('author') or 'Anonymous',
                         'channel_id': c.get('author_id') or c.get('channel') or '',
                         'date': get_comment_date(c) or 'Unknown',
                         'votes': votes_str,
                         'reply_count': initial_replies,
                         'is_reply': is_reply,
+                        'author_thumbnail': c.get('author_thumbnail') or '',
                         'comment': text  # Full unabridged text (no truncation)
                     }
                     all_comments.append(entry)
@@ -341,5 +406,6 @@ def get_comments_scraper_gen(
     yield {
         'result': all_comments,
         'aborted': False,
-        'stats': {'total': len(all_comments), 'top_level': top_level_count, 'replies': reply_count}
+        'stats': {'total': len(all_comments), 'top_level': top_level_count, 'replies': reply_count},
+        'video_info': video_meta
     }

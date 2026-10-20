@@ -1,3 +1,6 @@
 [flake8]
 exclude = venv*,build*,dist*,AppDir*,.flatpak*
 max-line-length = 127
+per-file-ignores =
+    main_gtk.py:E402
+    service_manager.py:E402

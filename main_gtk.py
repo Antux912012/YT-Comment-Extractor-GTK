@@ -1,18 +1,23 @@
-import sys
-import os
 import json
+import os
+import sys
 import threading
-import random
-import csv
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw, GLib, Gio, Gdk
+from gi.repository import Adw, Gio, GLib, Gtk
 
-from scraper import get_comments_scraper_gen, extract_video_id
+from exporters import export_to_csv, export_to_html, export_to_json
+from scraper import (
+    apply_sampling,
+    calculate_pool_size,
+    extract_video_id,
+    get_comments_scraper_gen,
+)
 
 CONFIG_DIR = Path.home() / '.config' / 'yt-comment-extractor'
 CONFIG_FILE = CONFIG_DIR / 'settings.json'
@@ -46,6 +51,7 @@ class YouTubeCommentExtractorApp(Adw.Application):
         self.connect('activate', self.on_activate)
 
         self.extracted_comments = []
+        self.video_info = {}
         self.extraction_thread = None
         self.stop_event = threading.Event()
         self.cookies_path = None
@@ -213,12 +219,29 @@ class YouTubeCommentExtractorApp(Adw.Application):
         self.cancel_btn.connect("clicked", self.on_cancel_clicked)
         action_box.append(self.cancel_btn)
 
-        self.export_btn = Gtk.Button(label="Export CSV...")
-        self.export_btn.add_css_class("accent")
-        self.export_btn.add_css_class("pill")
-        self.export_btn.set_sensitive(False)
-        self.export_btn.connect("clicked", self.on_export_clicked)
-        action_box.append(self.export_btn)
+        self.export_csv_btn = Gtk.Button(label="Export CSV")
+        self.export_csv_btn.add_css_class("accent")
+        self.export_csv_btn.add_css_class("pill")
+        self.export_csv_btn.set_tooltip_text("Export comments to CSV spreadsheet (preserves emoji symbols)")
+        self.export_csv_btn.set_sensitive(False)
+        self.export_csv_btn.connect("clicked", lambda b: self.on_export_clicked(b, "csv"))
+        action_box.append(self.export_csv_btn)
+
+        self.export_json_btn = Gtk.Button(label="Export JSON")
+        self.export_json_btn.add_css_class("accent")
+        self.export_json_btn.add_css_class("pill")
+        self.export_json_btn.set_tooltip_text("Export comments to formatted JSON")
+        self.export_json_btn.set_sensitive(False)
+        self.export_json_btn.connect("clicked", lambda b: self.on_export_clicked(b, "json"))
+        action_box.append(self.export_json_btn)
+
+        self.export_html_btn = Gtk.Button(label="Export HTML")
+        self.export_html_btn.add_css_class("accent")
+        self.export_html_btn.add_css_class("pill")
+        self.export_html_btn.set_tooltip_text("Export comments to interactive HTML styled like YouTube")
+        self.export_html_btn.set_sensitive(False)
+        self.export_html_btn.connect("clicked", lambda b: self.on_export_clicked(b, "html"))
+        action_box.append(self.export_html_btn)
 
         # -------------------------------------------------------------
         # Group 4: Live Execution Monitor & Stats
@@ -366,24 +389,18 @@ class YouTubeCommentExtractorApp(Adw.Application):
         save_settings(self.settings)
 
         # Determine extraction pool size
-        # Strategy 0: All Comments (Exhaustive Scan)
-        # Strategy 1: Unbiased Random Sample (Full Video Pool)
-        # Strategy 2: Fast Random Sample (Bounded Pool)
-        # Strategy 3: Sequential (First N as Ordered)
-        if strategy_idx in (0, 1):
-            pool_size = None  # Full scan
-        elif strategy_idx == 2:
-            pool_size = max(custom_pool, sample_size)
-        else:
-            pool_size = sample_size
+        pool_size = calculate_pool_size(strategy_idx, sample_size, custom_pool)
 
         # Reset state & UI
         self.extracted_comments = []
+        self.video_info = {}
         self.stop_event.clear()
         self.log_view.get_buffer().set_text("")
         self.extract_btn.set_visible(False)
         self.cancel_btn.set_visible(True)
-        self.export_btn.set_sensitive(False)
+        self.export_csv_btn.set_sensitive(False)
+        self.export_json_btn.set_sensitive(False)
+        self.export_html_btn.set_sensitive(False)
         self.stats_label.set_text("Status: Initializing yt-dlp extraction task...")
 
         # Spawn background extraction thread
@@ -408,7 +425,10 @@ class YouTubeCommentExtractorApp(Adw.Application):
                 f"Fast Random Sample (Pool: {pool_size}, Target: {sample_size})",
                 f"Sequential Ordered (Target: {sample_size})"
             ]
-            GLib.idle_add(self.append_log, f"[CONFIG] Strategy: {strategy_names[strategy_idx]} | Include Replies: {include_replies}")
+            GLib.idle_add(
+                self.append_log,
+                f"[CONFIG] Strategy: {strategy_names[strategy_idx]} | Include Replies: {include_replies}"
+            )
 
             all_comments = []
             aborted = False
@@ -427,8 +447,13 @@ class YouTubeCommentExtractorApp(Adw.Application):
                     GLib.idle_add(self.append_log, chunk['log'])
                 if 'stats' in chunk:
                     stats = chunk['stats']
-                    msg = f"Status: Extracted {stats['total']} comments ({stats['top_level']} top-level, {stats['replies']} replies)"
+                    msg = (
+                        f"Status: Extracted {stats['total']} comments "
+                        f"({stats['top_level']} top-level, {stats['replies']} replies)"
+                    )
                     GLib.idle_add(self.stats_label.set_text, msg)
+                if 'video_info' in chunk:
+                    self.video_info = chunk['video_info']
                 if 'error' in chunk:
                     GLib.idle_add(self.append_log, f"[ERROR] {chunk['error']}")
                     GLib.idle_add(self.show_toast, chunk['error'])
@@ -438,6 +463,8 @@ class YouTubeCommentExtractorApp(Adw.Application):
                 if 'result' in chunk:
                     all_comments = chunk['result']
                     aborted = chunk.get('aborted', False)
+                    if 'video_info' in chunk:
+                        self.video_info = chunk['video_info']
 
             if not all_comments:
                 if aborted:
@@ -452,23 +479,11 @@ class YouTubeCommentExtractorApp(Adw.Application):
                 return
 
             # Apply sampling de-biasing
-            if strategy_idx in (1, 2):
-                if len(all_comments) > sample_size:
-                    GLib.idle_add(
-                        self.append_log,
-                        f"[SAMPLE] Performing uniform random sampling: selecting {sample_size} from total pool of {len(all_comments)} comments."
-                    )
-                    selected_comments = random.sample(all_comments, sample_size)
-                else:
-                    note = f"[SAMPLE] Total collected ({len(all_comments)}) <= requested sample ({sample_size}). Keeping all {len(all_comments)} available comments."
-                    if not include_replies:
-                        note += " (Replies excluded per settings; all available top-level comments retrieved)."
-                    GLib.idle_add(self.append_log, note)
-                    selected_comments = all_comments
-            elif strategy_idx == 3:
-                selected_comments = all_comments[:sample_size]
-            else:
-                selected_comments = all_comments
+            selected_comments, sample_log = apply_sampling(
+                all_comments, strategy_idx, sample_size, include_replies
+            )
+            if sample_log:
+                GLib.idle_add(self.append_log, sample_log)
 
             GLib.idle_add(self.append_log, f"[COMPLETE] Ready with {len(selected_comments)} processed comments.")
             status_text = f"Status: Finished. {len(selected_comments)} comments ready for export."
@@ -489,90 +504,87 @@ class YouTubeCommentExtractorApp(Adw.Application):
 
         if success and comments:
             self.extracted_comments = comments
-            self.export_btn.set_sensitive(True)
+            self.export_csv_btn.set_sensitive(True)
+            self.export_json_btn.set_sensitive(True)
+            self.export_html_btn.set_sensitive(True)
             self.show_toast(f"Extraction complete: {len(comments)} comments ready.")
         else:
-            self.export_btn.set_sensitive(False)
+            self.export_csv_btn.set_sensitive(False)
+            self.export_json_btn.set_sensitive(False)
+            self.export_html_btn.set_sensitive(False)
 
-    def on_export_clicked(self, button):
+    def on_export_clicked(self, button, fmt):
         if not self.extracted_comments:
             return
 
-        default_name = f"yt_comments_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        vid = self.video_info.get('video_id') or 'comments'
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        default_name = f"yt_comments_{vid}_{timestamp}.{fmt}"
+
+        fmt_names = {
+            'csv': 'CSV Spreadsheets (*.csv)',
+            'json': 'JSON Documents (*.json)',
+            'html': 'YouTube Styled HTML (*.html)'
+        }
 
         if hasattr(Gtk, 'FileDialog'):
             dialog = Gtk.FileDialog()
-            dialog.set_title("Export Comments to CSV")
+            dialog.set_title(f"Export Comments to {fmt.upper()}")
             dialog.set_initial_name(default_name)
-            filter_csv = Gtk.FileFilter()
-            filter_csv.set_name("CSV Spreadsheets (*.csv)")
-            filter_csv.add_pattern("*.csv")
+            ffilter = Gtk.FileFilter()
+            ffilter.set_name(fmt_names.get(fmt, f"*.{fmt}"))
+            ffilter.add_pattern(f"*.{fmt}")
             filters = Gio.ListStore.new(Gtk.FileFilter)
-            filters.append(filter_csv)
+            filters.append(ffilter)
             dialog.set_filters(filters)
-            dialog.save(self.win, None, self.on_export_dialog_finish)
+            dialog.save(self.win, None, lambda d, res: self.on_export_dialog_finish(d, res, fmt))
         else:
             dialog = Gtk.FileChooserNative.new(
-                "Export Comments to CSV",
+                f"Export Comments to {fmt.upper()}",
                 self.win,
                 Gtk.FileChooserAction.SAVE,
                 "_Save",
                 "_Cancel"
             )
             dialog.set_current_name(default_name)
-            dialog.connect("response", self.on_export_native_finish)
+            dialog.connect("response", lambda d, res: self.on_export_native_finish(d, res, fmt))
             dialog.show()
 
-    def on_export_dialog_finish(self, dialog, result):
+    def on_export_dialog_finish(self, dialog, result, fmt):
         try:
             gfile = dialog.save_finish(result)
             if gfile:
                 path = gfile.get_path()
                 if path:
-                    self.write_csv_file(path)
+                    self.write_export_file(path, fmt)
         except Exception:
             pass
 
-    def on_export_native_finish(self, dialog, response):
+    def on_export_native_finish(self, dialog, response, fmt):
         if response == Gtk.ResponseType.ACCEPT:
             gfile = dialog.get_file()
             if gfile:
                 path = gfile.get_path()
                 if path:
-                    self.write_csv_file(path)
+                    self.write_export_file(path, fmt)
 
-    def write_csv_file(self, filepath):
+    def write_export_file(self, filepath, fmt):
         try:
-            if not filepath.lower().endswith('.csv'):
-                filepath += '.csv'
-            with open(filepath, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow([
-                    'Comment ID',
-                    'Author',
-                    'Channel ID',
-                    'Published Date',
-                    'Likes',
-                    'Is Reply',
-                    'Reply Count',
-                    'Comment Text'
-                ])
-                for c in self.extracted_comments:
-                    writer.writerow([
-                        c.get('cid', ''),
-                        c.get('nickname', ''),
-                        c.get('channel_id', ''),
-                        c.get('date', ''),
-                        c.get('votes', '0'),
-                        'Yes' if c.get('is_reply', False) else 'No',
-                        c.get('reply_count', 0),
-                        c.get('comment', '')
-                    ])
+            if not filepath.lower().endswith(f".{fmt}"):
+                filepath += f".{fmt}"
+
+            if fmt == 'csv':
+                export_to_csv(self.extracted_comments, filepath=filepath)
+            elif fmt == 'json':
+                export_to_json(self.extracted_comments, video_info=self.video_info, filepath=filepath)
+            elif fmt == 'html':
+                export_to_html(self.extracted_comments, video_info=self.video_info, filepath=filepath)
+
             self.append_log(f"[EXPORT] Successfully saved {len(self.extracted_comments)} comments to {filepath}")
-            self.show_toast(f"Exported {len(self.extracted_comments)} comments to CSV!")
+            self.show_toast(f"Exported {len(self.extracted_comments)} comments to {fmt.upper()}!")
         except Exception as e:
-            self.append_log(f"[ERROR] Failed to save CSV file: {e}")
-            self.show_toast(f"Failed to save CSV: {e}")
+            self.append_log(f"[ERROR] Failed to save {fmt.upper()} file: {e}")
+            self.show_toast(f"Failed to save {fmt.upper()}: {e}")
 
 
 if __name__ == '__main__':

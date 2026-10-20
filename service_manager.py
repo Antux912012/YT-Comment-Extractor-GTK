@@ -1,9 +1,9 @@
 import os
-import sys
-import time
-import threading
 import subprocess
+import threading
+import time
 import webbrowser
+
 from werkzeug.serving import make_server
 
 import web_app
@@ -57,15 +57,8 @@ zeroconf_instance = None
 state_lock = threading.Lock()
 
 
-def get_base_dir():
-    """Returns the base directory whether running as script or PyInstaller bundle."""
-    if getattr(sys, 'frozen', False):
-        return getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
-    return os.path.dirname(os.path.abspath(__file__))
-
-
-def get_local_ip():
-    return web_app.get_local_ip()
+get_base_dir = web_app.get_base_dir
+get_local_ip = web_app.get_local_ip
 
 
 LAN_MODE = False

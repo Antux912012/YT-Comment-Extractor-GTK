@@ -27,7 +27,7 @@ modules:
     buildsystem: simple
     build-commands:
       - mkdir -p /app/share/yt-extractor
-      - cp scraper.py main_gtk.py /app/share/yt-extractor/
+      - cp scraper.py exporters.py main_gtk.py /app/share/yt-extractor/
       - install -D start-yt-extractor /app/bin/start-yt-extractor
       - install -D io.github.antux912012.YTCommentExtractor.desktop /app/share/applications/io.github.antux912012.YTCommentExtractor.desktop
       - install -D io.github.antux912012.YTCommentExtractor.svg /app/share/icons/hicolor/scalable/apps/io.github.antux912012.YTCommentExtractor.svg

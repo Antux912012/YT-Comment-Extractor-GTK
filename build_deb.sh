@@ -21,7 +21,7 @@ ln -sf start-yt-extractor "${STAGE1}/usr/bin/yt-comment-extractor"
 
 install -m 644 "${ROOT_DIR}/io.github.antux912012.YTCommentExtractor.desktop" "${STAGE1}/usr/share/applications/"
 install -m 644 "${ROOT_DIR}/io.github.antux912012.YTCommentExtractor.svg" "${STAGE1}/usr/share/icons/hicolor/scalable/apps/"
-install -m 644 "${ROOT_DIR}/main_gtk.py" "${ROOT_DIR}/scraper.py" "${STAGE1}/usr/share/yt-extractor/"
+install -m 644 "${ROOT_DIR}/main_gtk.py" "${ROOT_DIR}/scraper.py" "${ROOT_DIR}/exporters.py" "${STAGE1}/usr/share/yt-extractor/"
 
 cat <<EOF > "${STAGE1}/DEBIAN/control"
 Package: yt-comment-extractor
@@ -59,7 +59,7 @@ ln -sf start-yt-extractor-service "${STAGE2}/usr/bin/yt-comment-extractor-servic
 
 install -m 644 "${ROOT_DIR}/io.github.antux912012.YTCommentExtractor.Service.desktop" "${STAGE2}/usr/share/applications/"
 install -m 644 "${ROOT_DIR}/io.github.antux912012.YTCommentExtractor.Service.svg" "${STAGE2}/usr/share/icons/hicolor/scalable/apps/"
-install -m 644 "${ROOT_DIR}/icon.png" "${ROOT_DIR}/scraper.py" "${ROOT_DIR}/service_manager.py" "${ROOT_DIR}/web_app.py" "${STAGE2}/usr/share/yt-extractor-service/"
+install -m 644 "${ROOT_DIR}/icon.png" "${ROOT_DIR}/scraper.py" "${ROOT_DIR}/exporters.py" "${ROOT_DIR}/service_manager.py" "${ROOT_DIR}/web_app.py" "${STAGE2}/usr/share/yt-extractor-service/"
 install -m 644 "${ROOT_DIR}/templates/index.html" "${STAGE2}/usr/share/yt-extractor-service/templates/index.html"
 
 cat <<EOF > "${STAGE2}/DEBIAN/control"

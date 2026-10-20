@@ -1,450 +1,1395 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Comment Extractor — Web Client</title>
-    <style>
-        :root {
-            --nord0: #2E3440;
-            --nord1: #3B4252;
-            --nord2: #434C5E;
-            --nord3: #4C566A;
-            --nord4: #D8DEE9;
-            --nord5: #E5E9F0;
-            --nord6: #ECEFF4;
-            --nord7: #8FBCBB;
-            --nord8: #88C0D0;
-            --nord9: #81A1C1;
-            --nord10: #5E81AC;
-            --nord11: #BF616A;
-            --nord12: #D08770;
-            --nord13: #EBCB8B;
-            --nord14: #A3BE8C;
-            --nord15: #B48EAD;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Comment Extractor — Web Client</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FF0000'><path d='M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z'/></svg>">
 
-        body {
-            background-color: var(--nord0);
-            color: var(--nord4);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 24px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .container {
-            background-color: var(--nord1);
-            padding: 32px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-            width: 100%;
-            max-width: 680px;
-        }
-
-        h1 {
-            color: var(--nord8);
-            text-align: center;
-            margin-top: 0;
-            margin-bottom: 6px;
-            font-size: 26px;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: var(--nord9);
-            font-size: 13px;
-            margin-bottom: 20px;
-        }
-
-        .endpoint-card {
-            background-color: var(--nord2);
-            border: 1px solid var(--nord3);
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .endpoint-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .endpoint-row input {
-            flex: 1;
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background-color: var(--nord11);
-            display: inline-block;
-        }
-        .status-dot.online {
-            background-color: var(--nord14);
-        }
-
-        .form-group {
-            margin-bottom: 18px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 6px;
-            color: var(--nord5);
-            font-weight: 500;
-            font-size: 14px;
-        }
-
-        .helper-text {
-            font-size: 11px;
-            color: var(--nord3);
-            margin-top: 4px;
-        }
-
-        input[type="text"], input[type="number"], select, input[type="file"] {
-            width: 100%;
-            padding: 10px 12px;
-            background-color: var(--nord2);
-            border: 1px solid var(--nord3);
-            color: var(--nord6);
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
-
-        input[type="text"]:focus, input[type="number"]:focus, select:focus {
-            outline: none;
-            border-color: var(--nord8);
-        }
-
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            color: var(--nord5);
-            font-size: 14px;
-        }
-
-        input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--nord10);
-            cursor: pointer;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        button {
-            flex: 1;
-            padding: 12px;
-            background-color: var(--nord10);
-            color: var(--nord6);
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: 600;
-            transition: background-color 0.2s, opacity 0.2s;
-        }
-
-        button:hover:not(:disabled) {
-            background-color: var(--nord9);
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        button.cancel-btn {
-            background-color: var(--nord11);
-        }
-        button.cancel-btn:hover:not(:disabled) {
-            background-color: #d06d76;
-        }
-
-        button.download-btn {
-            background-color: var(--nord14);
-            color: var(--nord0);
-            margin-top: 14px;
-            width: 100%;
-        }
-        button.download-btn:hover {
-            background-color: #b5d29d;
-        }
-
-        button.ping-btn {
-            flex: initial;
-            padding: 8px 14px;
-            font-size: 13px;
-        }
-
-        .status-bar {
-            margin-top: 18px;
-            text-align: center;
-            color: var(--nord14);
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .logs {
-            background-color: var(--nord0);
-            padding: 12px;
-            border-radius: 6px;
-            height: 160px;
-            overflow-y: auto;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-            color: var(--nord4);
-            margin-top: 14px;
-            border: 1px solid var(--nord3);
-        }
-
-        .hidden {
-            display: none !important;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <h1>YouTube Comment Extractor</h1>
-    <div class="subtitle">GitHub Pages Static Client &bull; Connects to Local or Remote Extraction Service</div>
-
-    <!-- Backend Configuration -->
-    <div class="endpoint-card">
-        <label for="apiUrl">Backend API Server Endpoint</label>
-        <div class="endpoint-row">
-            <span class="status-dot" id="statusDot" title="Backend Status"></span>
-            <input type="text" id="apiUrl" value="http://127.0.0.1:5000" placeholder="http://127.0.0.1:5000">
-            <button type="button" class="ping-btn" id="pingBtn">Test</button>
-        </div>
-        <div class="helper-text" id="endpointStatusText">Point to your local Docker container or desktop service.</div>
-    </div>
-
-    <form id="extractForm">
-        <div class="form-group">
-            <label for="url">YouTube Video URL</label>
-            <input type="text" id="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required>
-        </div>
-
-        <div class="form-group">
-            <label for="sort_mode">Sort Mode</label>
-            <select id="sort_mode" name="sort_mode">
-                <option value="0">Top Comments (Algorithm / Engagement)</option>
-                <option value="1">Newest First (Chronological)</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label class="checkbox-label">
-                <input type="checkbox" id="include_replies" name="include_replies" value="true" checked>
-                Include comment replies (Nested threads)
-            </label>
-        </div>
-
-        <div class="form-group">
-            <label for="sample_strategy">Sampling Strategy</label>
-            <select id="sample_strategy" name="sample_strategy">
-                <option value="0">Extract All Available Comments (No Sampling)</option>
-                <option value="1">First N Comments (Quick Extract)</option>
-                <option value="2">Uniform Random Sample across Entire Video</option>
-                <option value="3">Stratified Sample by Thread</option>
-            </select>
-        </div>
-
-        <div class="form-group" id="sampleSizeGroup" style="display: none;">
-            <label for="sample_size">Sample Size</label>
-            <input type="number" id="sample_size" name="sample_size" min="1" max="100000" value="100">
-            <div class="helper-text">Specifies how many comments to randomly or sequentially select.</div>
-        </div>
-
-        <div class="form-group">
-            <label for="cookies">Session Cookies (Optional, Netscape cookies.txt)</label>
-            <input type="file" id="cookies" name="cookies" accept=".txt">
-            <div class="helper-text">Required for age-restricted videos or member-only comments.</div>
-        </div>
-
-        <div class="button-group">
-            <button type="submit" id="startBtn">Start Extraction</button>
-            <button type="button" id="cancelBtn" class="cancel-btn hidden">Cancel Extraction</button>
-        </div>
-    </form>
-
-    <div class="status-bar" id="statusBar">Status: Ready</div>
-    <div class="logs" id="logsBox">Logs will appear here during extraction...</div>
-
-    <button id="downloadBtn" class="download-btn hidden">Download Comments (CSV)</button>
-</div>
-
-<script>
-    const form = document.getElementById('extractForm');
-    const apiUrlInput = document.getElementById('apiUrl');
-    const pingBtn = document.getElementById('pingBtn');
-    const statusDot = document.getElementById('statusDot');
-    const endpointStatusText = document.getElementById('endpointStatusText');
-    const startBtn = document.getElementById('startBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const statusBar = document.getElementById('statusBar');
-    const logsBox = document.getElementById('logsBox');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const strategySelect = document.getElementById('sample_strategy');
-    const sampleSizeGroup = document.getElementById('sampleSizeGroup');
-
-    // Restore saved API URL
-    const savedApiUrl = localStorage.getItem('yt_extractor_api_url');
-    if (savedApiUrl) {
-        apiUrlInput.value = savedApiUrl;
-    }
-
-    function getApiBase() {
-        return apiUrlInput.value.trim().replace(/\/+$/, '');
-    }
-
-    apiUrlInput.addEventListener('change', () => {
-        localStorage.setItem('yt_extractor_api_url', getApiBase());
-        checkBackendHealth();
-    });
-
-    strategySelect.addEventListener('change', () => {
-        if (strategySelect.value !== "0") {
-            sampleSizeGroup.style.display = 'block';
-        } else {
-            sampleSizeGroup.style.display = 'none';
-        }
-    });
-
-    let pollInterval = null;
-    let lastLogText = "";
-
-    async function checkBackendHealth() {
-        const base = getApiBase();
-        statusDot.className = 'status-dot';
-        endpointStatusText.textContent = "Checking connection...";
-        try {
-            const res = await fetch(`${base}/api/status`, { method: 'GET' });
-            if (res.ok) {
-                statusDot.className = 'status-dot online';
-                endpointStatusText.textContent = `Connected to service at ${base}`;
-                return true;
-            } else {
-                endpointStatusText.textContent = `Server responded with error status ${res.status}`;
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            nord: {
+              0: '#2E3440',
+              1: '#3B4252',
+              2: '#434C5E',
+              3: '#4C566A',
+              4: '#D8DEE9',
+              5: '#E5E9F0',
+              6: '#ECEFF4',
+              7: '#8FBCBB',
+              8: '#88C0D0',
+              9: '#81A1C1',
+              10: '#5E81AC',
+              11: '#BF616A',
+              12: '#D08770',
+              13: '#EBCB8B',
+              14: '#A3BE8C',
+              15: '#B48EAD'
             }
-        } catch (e) {
-            endpointStatusText.textContent = `Cannot reach backend at ${base}. Make sure it is running.`;
+          }
         }
-        return false;
-    }
+      }
+    };
+  </script>
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #4C566A; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #81A1C1; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200 dark:bg-nord-0 dark:text-nord-4">
 
-    pingBtn.addEventListener('click', checkBackendHealth);
+  <!-- ========================================================================= -->
+  <!-- MOD_3: UI_SHELL (GTK / Adwaita inspired clean utility layout)            -->
+  <!-- ========================================================================= -->
+  <header class="border-b border-nord-2 bg-nord-1/80 backdrop-blur sticky top-0 z-30 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <svg class="w-8 h-8 flex-shrink-0" viewBox="0 0 24 24" fill="#FF0000">
+          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+        </svg>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-nord-8 flex items-center gap-2">
+            YT Comment Extractor
+            <span class="text-xs px-2 py-0.5 rounded-full bg-nord-10/30 text-nord-8 font-medium">SPA Static</span>
+          </h1>
+          <p class="text-xs text-nord-9 hidden sm:block">Client-Side Streaming &bull; IndexedDB Cache &bull; Zero Backend</p>
+        </div>
+      </div>
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const base = getApiBase();
-        localStorage.setItem('yt_extractor_api_url', base);
+      <div class="flex items-center gap-2">
+        <span id="engineBadge" class="text-xs px-2.5 py-1 rounded-full bg-nord-2 text-nord-7 border border-nord-3 font-mono font-medium flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-nord-14"></span>
+          <span id="engineBadgeText">Engine: Innertube</span>
+        </span>
 
-        startBtn.disabled = true;
-        cancelBtn.classList.remove('hidden');
-        cancelBtn.disabled = false;
-        downloadBtn.classList.add('hidden');
-        statusBar.innerText = "Status: Connecting to backend...";
-        logsBox.textContent = "Initializing extraction job...\n";
-        lastLogText = logsBox.textContent;
+        <button id="btnSettings" class="p-2 rounded-lg bg-nord-2 hover:bg-nord-3 text-nord-4 hover:text-nord-6 transition" title="Extraction Settings & API Keys">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </button>
 
-        const formData = new FormData(form);
+        <button id="btnThemeToggle" class="p-2 rounded-lg bg-nord-2 hover:bg-nord-3 text-nord-4 hover:text-nord-6 transition" title="Toggle Light/Dark Theme">
+          <svg id="themeIconDark" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9h-1m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          <svg id="themeIconLight" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
 
-        try {
-            const res = await fetch(`${base}/api/start`, {
-                method: 'POST',
-                body: formData
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full flex flex-col gap-6">
+
+    <!-- Control Panel Card -->
+    <section class="bg-nord-1 border border-nord-2 rounded-xl p-5 shadow-lg">
+      <div class="flex flex-col gap-4">
+        <!-- URL Input Row -->
+        <div>
+          <label for="videoUrl" class="block text-xs font-semibold uppercase tracking-wider text-nord-4 mb-1">
+            Target YouTube URL or Video ID
+          </label>
+          <div class="relative flex items-center">
+            <input type="text" id="videoUrl" placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ or shorts/embed/video ID"
+                   class="w-full bg-nord-2 border border-nord-3 text-nord-6 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-nord-8 focus:ring-1 focus:ring-nord-8 pr-32 transition">
+            <div class="absolute right-2 flex items-center gap-1.5">
+              <span id="videoIdBadge" class="hidden text-xs bg-nord-10 text-nord-6 px-2 py-0.5 rounded font-mono font-bold"></span>
+              <button id="btnPaste" type="button" class="px-2 py-1 text-xs bg-nord-3 hover:bg-nord-9 text-nord-6 rounded transition" title="Paste from Clipboard">
+                Paste
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Parameters Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Engine Selection -->
+          <div>
+            <label for="engineSelect" class="block text-xs font-medium text-nord-4 mb-1">Extraction Engine</label>
+            <select id="engineSelect" class="w-full bg-nord-2 border border-nord-3 text-nord-6 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-nord-8">
+              <option value="INNERTUBE">Keyless Innertube (Proxy)</option>
+              <option value="API">Official YouTube Data API v3</option>
+            </select>
+          </div>
+
+          <!-- Sort Mode -->
+          <div>
+            <label for="sortSelect" class="block text-xs font-medium text-nord-4 mb-1">Sort Order</label>
+            <select id="sortSelect" class="w-full bg-nord-2 border border-nord-3 text-nord-6 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-nord-8">
+              <option value="relevance">Top Comments (Relevance / Top)</option>
+              <option value="time">Newest First (Chronological)</option>
+            </select>
+          </div>
+
+          <!-- Max Limit -->
+          <div>
+            <label for="maxLimitInput" class="block text-xs font-medium text-nord-4 mb-1">Max Comments Limit (0 = All)</label>
+            <input type="number" id="maxLimitInput" value="1000" min="0" step="100"
+                   class="w-full bg-nord-2 border border-nord-3 text-nord-6 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-nord-8">
+          </div>
+
+          <!-- Replies Checkbox -->
+          <div class="flex items-center pt-5">
+            <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="chkReplies" checked
+                     class="w-4 h-4 rounded bg-nord-2 border-nord-3 text-nord-10 focus:ring-nord-8 focus:ring-offset-nord-1">
+              <span class="text-sm text-nord-5 font-medium">Include Replies (Nested)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap items-center gap-3 pt-2 border-t border-nord-2">
+          <button id="btnStart" class="px-6 py-2.5 bg-nord-10 hover:bg-nord-9 text-nord-6 font-semibold rounded-lg shadow transition flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"/></svg>
+            <span>Start Extraction</span>
+          </button>
+
+          <button id="btnPause" disabled class="px-5 py-2.5 bg-nord-3 hover:bg-nord-2 text-nord-5 font-semibold rounded-lg transition flex items-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z"/></svg>
+            <span id="btnPauseText">Pause</span>
+          </button>
+
+          <button id="btnAbort" disabled class="px-5 py-2.5 bg-nord-11 hover:bg-red-600 text-nord-6 font-semibold rounded-lg transition flex items-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M4 4h12v12H4z"/></svg>
+            <span>Abort</span>
+          </button>
+
+          <button id="btnClearDB" class="ml-auto px-4 py-2 text-xs text-nord-11 hover:text-red-400 hover:bg-nord-2 rounded transition">
+            Clear Database
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Telemetry Bar -->
+    <section class="bg-nord-1 border border-nord-2 rounded-xl p-4 shadow-sm flex flex-col gap-3">
+      <div class="flex flex-wrap items-center justify-between text-xs gap-2">
+        <div class="flex items-center gap-3">
+          <span class="font-bold uppercase tracking-wider text-nord-7" id="statusText">Status: Idle</span>
+          <span class="text-nord-3">|</span>
+          <span class="text-nord-4">Collected: <strong class="text-nord-8 text-sm" id="statCount">0</strong></span>
+          <span class="text-nord-3">|</span>
+          <span class="text-nord-4">Speed: <strong class="text-nord-14" id="statSpeed">0/s</strong></span>
+          <span class="text-nord-3">|</span>
+          <span class="text-nord-4">Elapsed: <strong class="text-nord-13" id="statTime">00:00</strong></span>
+        </div>
+        <div id="videoMetaText" class="text-nord-9 truncate max-w-md font-medium"></div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="w-full bg-nord-2 rounded-full h-2 overflow-hidden">
+        <div id="progressBar" class="bg-gradient-to-r from-nord-10 to-nord-8 h-2 rounded-full w-0 transition-all duration-300"></div>
+      </div>
+
+      <!-- Status banner / Error alert -->
+      <div id="statusAlert" class="hidden text-xs rounded-lg p-3 bg-nord-2 border border-nord-3 text-nord-4"></div>
+    </section>
+
+    <!-- DataGrid & Instant Filter Section -->
+    <section class="bg-nord-1 border border-nord-2 rounded-xl shadow-lg flex flex-col flex-1 overflow-hidden">
+      <!-- Filter Toolbar -->
+      <div class="p-4 border-b border-nord-2 bg-nord-1/60 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-3 flex-1">
+          <!-- Keyword Filter -->
+          <div class="relative flex-1 min-w-[200px] max-w-md">
+            <input type="text" id="filterKeyword" placeholder="Filter text or @author..."
+                   class="w-full bg-nord-2 border border-nord-3 text-nord-5 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-nord-8">
+            <svg class="w-4 h-4 text-nord-3 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+
+          <!-- Min Likes Filter -->
+          <div class="flex items-center gap-1.5">
+            <label for="filterMinLikes" class="text-xs text-nord-4">Min Likes:</label>
+            <input type="number" id="filterMinLikes" value="0" min="0"
+                   class="w-20 bg-nord-2 border border-nord-3 text-nord-5 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-nord-8">
+          </div>
+
+          <!-- Type filter -->
+          <select id="filterType" class="bg-nord-2 border border-nord-3 text-nord-5 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-nord-8">
+            <option value="all">All Comments</option>
+            <option value="top">Top-Level Only</option>
+            <option value="reply">Replies Only</option>
+          </select>
+        </div>
+
+        <!-- Export Buttons Toolbar -->
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-nord-3 mr-1 hidden sm:inline">Export:</span>
+          <button id="btnExportCSV" class="px-3 py-1.5 bg-nord-14 hover:bg-green-600 text-nord-0 font-bold rounded-lg text-xs shadow transition flex items-center gap-1.5" title="Export CSV spreadsheet with UTF-8 BOM (preserves emoji symbols in Excel)">
+            <span>CSV</span>
+          </button>
+          <button id="btnExportJSON" class="px-3 py-1.5 bg-nord-8 hover:bg-cyan-400 text-nord-0 font-bold rounded-lg text-xs shadow transition" title="Export structured JSON dataset">
+            <span>JSON</span>
+          </button>
+          <button id="btnExportNDJSON" class="px-3 py-1.5 bg-nord-9 hover:bg-sky-400 text-nord-0 font-bold rounded-lg text-xs shadow transition" title="Export Newline-Delimited JSON (for big data / streaming)">
+            <span>NDJSON</span>
+          </button>
+          <button id="btnExportHTML" class="px-3 py-1.5 bg-nord-13 hover:bg-yellow-400 text-nord-0 font-bold rounded-lg text-xs shadow transition" title="Export YouTube-styled interactive comments web page">
+            <span>HTML</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Paginated Table Container -->
+      <div class="flex-1 overflow-x-auto min-h-[360px] max-h-[600px] overflow-y-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead class="bg-nord-2/60 text-nord-4 sticky top-0 uppercase tracking-wider text-[11px] font-semibold border-b border-nord-3 z-10">
+            <tr>
+              <th class="py-2.5 px-3 w-12 text-center">#</th>
+              <th class="py-2.5 px-3 w-48">Author</th>
+              <th class="py-2.5 px-3">Comment Text</th>
+              <th class="py-2.5 px-3 w-24 text-right cursor-pointer hover:text-nord-8" id="thLikes">Likes ▲▼</th>
+              <th class="py-2.5 px-3 w-20 text-center">Replies</th>
+              <th class="py-2.5 px-3 w-32 cursor-pointer hover:text-nord-8" id="thDate">Date ▲▼</th>
+            </tr>
+          </thead>
+          <tbody id="commentTableBody" class="divide-y divide-nord-2 font-normal text-nord-5">
+            <tr>
+              <td colspan="6" class="py-12 text-center text-nord-3 italic">
+                No comments in local database. Enter a YouTube URL and click "Start Extraction".
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="px-4 py-3 border-t border-nord-2 bg-nord-1/80 flex items-center justify-between text-xs text-nord-4">
+        <div>
+          Showing <span id="pageRangeText" class="font-bold text-nord-5">0-0</span> of <span id="pageTotalText" class="font-bold text-nord-8">0</span> filtered comments
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnPrevPage" disabled class="px-2.5 py-1 rounded bg-nord-2 hover:bg-nord-3 disabled:opacity-40 disabled:cursor-not-allowed">
+            &larr; Prev
+          </button>
+          <span class="text-nord-4">Page <strong id="currentPageText" class="text-nord-6">1</strong> of <strong id="totalPagesText" class="text-nord-6">1</strong></span>
+          <button id="btnNextPage" disabled class="px-2.5 py-1 rounded bg-nord-2 hover:bg-nord-3 disabled:opacity-40 disabled:cursor-not-allowed">
+            Next &rarr;
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-nord-1 border border-nord-2 rounded-xl shadow-2xl max-w-lg w-full p-6 text-nord-5 flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-nord-2 pb-3">
+        <h3 class="font-bold text-base text-nord-8 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+          Extraction Engine Settings
+        </h3>
+        <button id="btnCloseSettings" class="text-nord-4 hover:text-nord-6">&times;</button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-nord-6 mb-1">YouTube Data API v3 Key (Engine A)</label>
+          <input type="password" id="inputApiKey" placeholder="AIzaSy..."
+                 class="w-full bg-nord-2 border border-nord-3 text-nord-6 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-nord-8">
+          <p class="text-nord-4 mt-1">Saved securely in browser <code>localStorage</code>. Never committed or sent anywhere except Google APIs.</p>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-nord-6 mb-1">CORS Proxy URL (Engine B: Innertube)</label>
+          <div class="flex gap-2 mb-2">
+            <select id="selectPresetProxy" class="bg-nord-2 border border-nord-3 text-nord-6 rounded px-2 py-1 text-xs">
+              <option value="https://corsproxy.io/?">corsproxy.io (Default)</option>
+              <option value="https://api.allorigins.win/raw?url=">allorigins.win</option>
+              <option value="custom">Custom URL...</option>
+            </select>
+          </div>
+          <input type="text" id="inputCorsProxy" placeholder="https://corsproxy.io/?"
+                 class="w-full bg-nord-2 border border-nord-3 text-nord-6 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-nord-8">
+          <p class="text-nord-4 mt-1">Required for keyless Innertube extraction to bypass browser cross-origin policy.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 border-t border-nord-2 pt-3 mt-2">
+        <button id="btnSaveSettings" class="px-5 py-2 bg-nord-10 hover:bg-nord-9 text-nord-6 font-bold rounded-lg text-xs transition">
+          Save Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-nord-2 py-3 px-6 text-center text-xs text-nord-3">
+    YouTube Comment Extractor &bull; 100% Client-Side Static Architecture &bull; GitHub Pages Hosted
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- MOD_1 to MOD_4: JAVASCRIPT LOGIC IMPLEMENTATION                          -->
+  <!-- ========================================================================= -->
+  <script type="module">
+    // -----------------------------------------------------------------------
+    // MOD_1: STATE & STORAGE (IndexedDB + localStorage)
+    // -----------------------------------------------------------------------
+    const ConfigStore = {
+      get() {
+        return {
+          apiKey: localStorage.getItem('yt_extractor_api_key') || '',
+          corsProxy: localStorage.getItem('yt_extractor_cors_proxy') || 'https://corsproxy.io/?',
+          engine: localStorage.getItem('yt_extractor_engine') || 'INNERTUBE',
+          theme: localStorage.getItem('yt_extractor_theme') || 'dark',
+          sort: localStorage.getItem('yt_extractor_sort') || 'relevance',
+          maxLimit: parseInt(localStorage.getItem('yt_extractor_max_limit') || '1000', 10),
+          includeReplies: localStorage.getItem('yt_extractor_replies') !== 'false'
+        };
+      },
+      save(cfg) {
+        if (cfg.apiKey !== undefined) localStorage.setItem('yt_extractor_api_key', cfg.apiKey.trim());
+        if (cfg.corsProxy !== undefined) localStorage.setItem('yt_extractor_cors_proxy', cfg.corsProxy.trim());
+        if (cfg.engine !== undefined) localStorage.setItem('yt_extractor_engine', cfg.engine);
+        if (cfg.theme !== undefined) localStorage.setItem('yt_extractor_theme', cfg.theme);
+        if (cfg.sort !== undefined) localStorage.setItem('yt_extractor_sort', cfg.sort);
+        if (cfg.maxLimit !== undefined) localStorage.setItem('yt_extractor_max_limit', cfg.maxLimit.toString());
+        if (cfg.includeReplies !== undefined) localStorage.setItem('yt_extractor_replies', cfg.includeReplies ? 'true' : 'false');
+      }
+    };
+
+    const CommentDB = {
+      db: null,
+      DB_NAME: 'yt_comments_db',
+      STORE_NAME: 'comments',
+      VERSION: 1,
+
+      async init() {
+        if (this.db) return this.db;
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(this.DB_NAME, this.VERSION);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+              const store = db.createObjectStore(this.STORE_NAME, { keyPath: 'id' });
+              store.createIndex('likeCount', 'likeCount', { unique: false });
+              store.createIndex('publishedAt', 'publishedAt', { unique: false });
+              store.createIndex('parentId', 'parentId', { unique: false });
+              store.createIndex('author', 'author', { unique: false });
+            }
+          };
+          req.onsuccess = (e) => {
+            this.db = e.target.result;
+            resolve(this.db);
+          };
+          req.onerror = (e) => reject(e.target.error);
+        });
+      },
+
+      async clear() {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([this.STORE_NAME], 'readwrite');
+          const store = tx.objectStore(this.STORE_NAME);
+          const req = store.clear();
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      },
+
+      async bulkPut(records) {
+        if (!records || records.length === 0) return;
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([this.STORE_NAME], 'readwrite');
+          const store = tx.objectStore(this.STORE_NAME);
+          for (const item of records) {
+            store.put(item);
+          }
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+      },
+
+      async query({ keyword = '', minLikes = 0, type = 'all', sortBy = 'default', page = 1, pageSize = 100 }) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([this.STORE_NAME], 'readonly');
+          const store = tx.objectStore(this.STORE_NAME);
+          const req = store.getAll();
+
+          req.onsuccess = () => {
+            let list = req.result || [];
+            const kw = keyword.trim().toLowerCase();
+
+            // Filter in-memory
+            if (kw) {
+              list = list.filter(r => (r.text && r.text.toLowerCase().includes(kw)) ||
+                                      (r.author && r.author.toLowerCase().includes(kw)));
+            }
+            if (minLikes > 0) {
+              list = list.filter(r => (r.likeCount || 0) >= minLikes);
+            }
+            if (type === 'top') {
+              list = list.filter(r => r.parentId === null);
+            } else if (type === 'reply') {
+              list = list.filter(r => r.parentId !== null);
+            }
+
+            // Sorting
+            if (sortBy === 'likes_desc') {
+              list.sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
+            } else if (sortBy === 'likes_asc') {
+              list.sort((a, b) => (a.likeCount || 0) - (b.likeCount || 0));
+            } else if (sortBy === 'date_desc') {
+              list.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+            } else if (sortBy === 'date_asc') {
+              list.sort((a, b) => new Date(a.publishedAt || 0) - new Date(b.publishedAt || 0));
+            }
+
+            const total = list.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const curPage = Math.min(Math.max(1, page), totalPages);
+            const start = (curPage - 1) * pageSize;
+            const items = list.slice(start, start + pageSize);
+
+            resolve({ items, total, totalPages, page: curPage, pageSize });
+          };
+          req.onerror = () => reject(req.error);
+        });
+      },
+
+      async getAll() {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([this.STORE_NAME], 'readonly');
+          const req = tx.objectStore(this.STORE_NAME).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+    };
+
+    // -----------------------------------------------------------------------
+    // MOD_2: INLINE_WEB_WORKER (FetchWorker Blob)
+    // -----------------------------------------------------------------------
+    const workerScript = `
+      let isPaused = false;
+      let isAborted = false;
+      let pauseResolver = null;
+
+      function waitIfPaused() {
+        if (!isPaused) return Promise.resolve();
+        return new Promise(resolve => { pauseResolver = resolve; });
+      }
+
+      function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      function buildProxyUrl(proxy, target) {
+        const p = proxy.trim();
+        if (p.endsWith('=') || p.endsWith('?')) {
+          return p + encodeURIComponent(target);
+        }
+        return p.endsWith('/') ? p + target : p + '/' + target;
+      }
+
+      // =====================================================================
+      // ENGINE A: Official YouTube Data API v3
+      // =====================================================================
+      async function runApiLoop({ videoId, apiKey, sort, maxLimit, includeReplies }) {
+        let pageToken = '';
+        let totalCount = 0;
+
+        self.postMessage({ evt: 'LOG', message: '[API v3] Connecting to YouTube Data API for video ID: ' + videoId });
+
+        while (!isAborted) {
+          await waitIfPaused();
+          if (isAborted) break;
+
+          const params = new URLSearchParams({
+            part: 'snippet,replies',
+            videoId: videoId,
+            maxResults: '100',
+            order: sort === 'time' ? 'time' : 'relevance',
+            key: apiKey
+          });
+          if (pageToken) params.append('pageToken', pageToken);
+
+          const url = 'https://www.googleapis.com/youtube/v3/commentThreads?' + params.toString();
+          let res;
+          try {
+            res = await fetch(url);
+          } catch (netErr) {
+            self.postMessage({ evt: 'ERROR', error: 'Network failure contacting Google API: ' + netErr.message });
+            return;
+          }
+
+          if (res.status === 403) {
+            const errBody = await res.json().catch(() => ({}));
+            const reason = errBody.error?.errors?.[0]?.reason || 'Forbidden';
+            let msg = 'Google API 403 Forbidden: ' + (errBody.error?.message || reason);
+            if (reason === 'commentsDisabled') msg = 'Comments are disabled on this video.';
+            if (reason === 'quotaExceeded') msg = 'YouTube Data API daily quota exceeded for this API key.';
+            self.postMessage({ evt: 'ERROR', error: msg });
+            return;
+          }
+
+          if (res.status === 429) {
+            self.postMessage({ evt: 'RATE_LIMIT', error: 'Rate limit hit (429). Retrying in 3 seconds...' });
+            await sleep(3000);
+            continue;
+          }
+
+          if (!res.ok) {
+            const errText = await res.text().catch(() => '');
+            self.postMessage({ evt: 'ERROR', error: 'YouTube API error (' + res.status + '): ' + errText });
+            return;
+          }
+
+          const data = await res.json();
+          const items = data.items || [];
+          if (items.length === 0) break;
+
+          const records = [];
+          for (const item of items) {
+            const snip = item.snippet?.topLevelComment?.snippet || {};
+            const topId = item.id;
+            records.push({
+              id: topId,
+              parentId: null,
+              author: snip.authorDisplayName || 'Anonymous',
+              authorId: snip.authorChannelId?.value || '',
+              text: snip.textDisplay || snip.textOriginal || '',
+              publishedAt: snip.publishedAt || new Date().toISOString(),
+              likeCount: Number(snip.likeCount) || 0,
+              replyCount: Number(item.snippet?.totalReplyCount) || 0
             });
 
-            if (res.ok) {
-                statusBar.innerText = "Status: Connecting via yt-dlp...";
-                if (pollInterval) clearInterval(pollInterval);
-                pollInterval = setInterval(pollStatus, 1000);
-            } else {
-                const err = await res.json().catch(() => ({}));
-                alert(err.error || "An error occurred starting extraction.");
-                startBtn.disabled = false;
-                cancelBtn.classList.add('hidden');
+            if (includeReplies && item.replies && item.replies.comments) {
+              for (const rep of item.replies.comments) {
+                const rSnip = rep.snippet || {};
+                records.push({
+                  id: rep.id,
+                  parentId: topId,
+                  author: rSnip.authorDisplayName || 'Anonymous',
+                  authorId: rSnip.authorChannelId?.value || '',
+                  text: rSnip.textDisplay || rSnip.textOriginal || '',
+                  publishedAt: rSnip.publishedAt || new Date().toISOString(),
+                  likeCount: Number(rSnip.likeCount) || 0,
+                  replyCount: 0
+                });
+              }
             }
-        } catch (err) {
-            console.error(err);
-            alert(`Network error contacting server at ${base}. Verify CORS & local network settings.`);
-            startBtn.disabled = false;
-            cancelBtn.classList.add('hidden');
-        }
-    });
+          }
 
-    cancelBtn.addEventListener('click', async () => {
-        cancelBtn.disabled = true;
+          totalCount += records.length;
+          self.postMessage({ evt: 'BATCH', data: records, total: totalCount });
+
+          if (maxLimit > 0 && totalCount >= maxLimit) {
+            self.postMessage({ evt: 'LOG', message: '[API v3] Reached requested max limit of ' + maxLimit + ' comments.' });
+            break;
+          }
+
+          pageToken = data.nextPageToken || '';
+          if (!pageToken) break;
+
+          await sleep(50);
+        }
+
+        self.postMessage({ evt: 'DONE', total: totalCount });
+      }
+
+      // =====================================================================
+      // ENGINE B: Keyless Innertube Continuation Loop
+      // =====================================================================
+      async function runInnertubeLoop({ videoId, corsProxy, maxLimit, includeReplies }) {
+        self.postMessage({ evt: 'LOG', message: '[Innertube] Fetching video watch page via CORS proxy...' });
+
+        const watchUrl = 'https://www.youtube.com/watch?v=' + videoId;
+        const proxyWatchUrl = buildProxyUrl(corsProxy, watchUrl);
+
+        let htmlText = '';
         try {
-            await fetch(`${getApiBase()}/api/cancel`, { method: 'POST' });
+          const res = await fetch(proxyWatchUrl);
+          if (!res.ok) throw new Error('Proxy responded with status ' + res.status);
+          htmlText = await res.text();
         } catch (e) {
-            console.error(e);
+          self.postMessage({
+            evt: 'ERROR',
+            error: 'Failed to fetch video page through CORS proxy: ' + e.message + '. Verify proxy settings or switch to API v3.'
+          });
+          return;
         }
-    });
 
-    async function pollStatus() {
-        const base = getApiBase();
-        try {
-            const res = await fetch(`${base}/api/status`);
-            const data = await res.json();
+        // 1. Extract API Key
+        let apiKey = 'AIzaSyAO_FJ2SlqAE4AnHs-UfnOO5VnDnOS4Z4o'; // default YouTube Web client key fallback
+        const keyMatch = htmlText.match(/"INNERTUBE_API_KEY":"([a-zA-Z0-9_-]+)"/);
+        if (keyMatch) apiKey = keyMatch[1];
 
-            statusBar.innerText = `Status: ${data.status.toUpperCase()} | Progress: ${data.progress} comments`;
+        // 2. Extract initial continuation token from ytInitialData
+        let initialToken = null;
+        const initialDataMatch = htmlText.match(/var ytInitialData\s*=\s*({.+?});<\/script>/s) ||
+                                 htmlText.match(/ytInitialData\s*=\s*({.+?});/s);
+        if (initialDataMatch) {
+          try {
+            const parsed = JSON.parse(initialDataMatch[1]);
+            initialToken = findContinuationToken(parsed);
+          } catch (_) {}
+        }
 
-            if (data.logs && data.logs.length > 0) {
-                const joined = data.logs.join('\n');
-                if (joined !== lastLogText) {
-                    lastLogText = joined;
-                    logsBox.textContent = joined;
-                    logsBox.scrollTop = logsBox.scrollHeight;
-                }
+        // Fallback regex search for token in HTML
+        if (!initialToken) {
+          const tokenRegexMatch = htmlText.match(/"continuationCommand":\{"token":"([a-zA-Z0-9_-]+)"/);
+          if (tokenRegexMatch) initialToken = tokenRegexMatch[1];
+        }
+
+        if (!initialToken) {
+          self.postMessage({
+            evt: 'ERROR',
+            error: 'Could not find comments continuation token. Comments might be disabled or video is age-restricted.'
+          });
+          return;
+        }
+
+        self.postMessage({ evt: 'LOG', message: '[Innertube] Initial continuation token acquired. Starting streaming loop...' });
+
+        const context = {
+          client: {
+            clientName: "WEB",
+            clientVersion: "2.20240101.00.00",
+            hl: "en",
+            gl: "US"
+          }
+        };
+
+        let continuation = initialToken;
+        let totalCount = 0;
+
+        while (continuation && !isAborted) {
+          await waitIfPaused();
+          if (isAborted) break;
+
+          const endpoint = 'https://www.youtube.com/youtubei/v1/next?key=' + apiKey;
+          const proxyEndpoint = buildProxyUrl(corsProxy, endpoint);
+
+          let resp;
+          try {
+            resp = await fetch(proxyEndpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ context, continuation })
+            });
+          } catch (e) {
+            self.postMessage({ evt: 'ERROR', error: 'Network failure calling YouTube Innertube API: ' + e.message });
+            return;
+          }
+
+          if (resp.status === 429) {
+            self.postMessage({ evt: 'RATE_LIMIT', error: 'Innertube rate limit (429). Retrying in 3 seconds...' });
+            await sleep(3000);
+            continue;
+          }
+
+          if (!resp.ok) {
+            self.postMessage({ evt: 'ERROR', error: 'Innertube responded with HTTP error: ' + resp.status });
+            return;
+          }
+
+          const json = await resp.json().catch(() => ({}));
+          const { records, nextToken } = parseInnertubeResponse(json, includeReplies);
+
+          if (records.length > 0) {
+            totalCount += records.length;
+            self.postMessage({ evt: 'BATCH', data: records, total: totalCount });
+          }
+
+          if (maxLimit > 0 && totalCount >= maxLimit) {
+            self.postMessage({ evt: 'LOG', message: '[Innertube] Reached requested max limit of ' + maxLimit + ' comments.' });
+            break;
+          }
+
+          continuation = nextToken;
+          await sleep(50);
+        }
+
+        self.postMessage({ evt: 'DONE', total: totalCount });
+      }
+
+      function findContinuationToken(obj) {
+        if (!obj || typeof obj !== 'object') return null;
+        if (obj.continuationCommand && obj.continuationCommand.token) {
+          return obj.continuationCommand.token;
+        }
+        if (obj.continuationItemRenderer && obj.continuationItemRenderer.continuationEndpoint?.continuationCommand?.token) {
+          return obj.continuationItemRenderer.continuationEndpoint.continuationCommand.token;
+        }
+        for (const k of Object.keys(obj)) {
+          const found = findContinuationToken(obj[k]);
+          if (found) return found;
+        }
+        return null;
+      }
+
+      function parseInnertubeResponse(data, includeReplies) {
+        const records = [];
+        let nextToken = null;
+
+        const endpoints = data.onResponseReceivedEndpoints || [];
+        for (const ep of endpoints) {
+          const action = ep.reloadContinuationItemsCommand || ep.appendContinuationItemsAction;
+          if (!action || !action.continuationItems) continue;
+
+          for (const item of action.continuationItems) {
+            if (item.continuationItemRenderer) {
+              nextToken = item.continuationItemRenderer.continuationEndpoint?.continuationCommand?.token || null;
             }
 
-            if (data.status === 'running') {
-                startBtn.disabled = true;
-                cancelBtn.classList.remove('hidden');
-                if (!pollInterval) {
-                    pollInterval = setInterval(pollStatus, 1000);
-                }
+            const thread = item.commentThreadRenderer;
+            if (thread && thread.comment) {
+              const cr = thread.comment.commentRenderer;
+              if (cr) {
+                const commentId = cr.commentId || ('c_' + Math.random().toString(36).substring(2, 9));
+                const author = cr.authorText?.simpleText || cr.authorText?.runs?.[0]?.text || 'Anonymous';
+                const authorId = cr.authorEndpoint?.browseEndpoint?.browseId || '';
+                const text = cr.contentText?.runs?.map(r => r.text).join('') || cr.contentText?.simpleText || '';
+                const publishedAt = cr.publishedTimeText?.runs?.[0]?.text || '';
+                const likeCountStr = cr.voteCount?.simpleText || (cr.likeCount ? String(cr.likeCount) : '0');
+                const likeCount = parseVoteCount(likeCountStr);
+                const replyCount = cr.replyCount || 0;
+
+                records.push({
+                  id: commentId,
+                  parentId: null,
+                  author,
+                  authorId,
+                  text,
+                  publishedAt,
+                  likeCount,
+                  replyCount
+                });
+              }
+            }
+          }
+        }
+
+        return { records, nextToken };
+      }
+
+      function parseVoteCount(val) {
+        if (!val) return 0;
+        const clean = String(val).trim().toUpperCase();
+        if (clean.endsWith('K')) return Math.round(parseFloat(clean) * 1000);
+        if (clean.endsWith('M')) return Math.round(parseFloat(clean) * 1000000);
+        const parsed = parseInt(clean.replace(/[^0-9]/g, ''), 10);
+        return isNaN(parsed) ? 0 : parsed;
+      }
+
+      // =====================================================================
+      // Worker Event Dispatcher
+      // =====================================================================
+      self.onmessage = async (e) => {
+        const { cmd, ...payload } = e.data || {};
+        if (cmd === 'START') {
+          isPaused = false;
+          isAborted = false;
+          if (payload.engine === 'API') {
+            await runApiLoop(payload);
+          } else {
+            await runInnertubeLoop(payload);
+          }
+        } else if (cmd === 'PAUSE') {
+          isPaused = true;
+          self.postMessage({ evt: 'STATUS', status: 'paused' });
+        } else if (cmd === 'RESUME') {
+          isPaused = false;
+          if (pauseResolver) {
+            pauseResolver();
+            pauseResolver = null;
+          }
+          self.postMessage({ evt: 'STATUS', status: 'fetching' });
+        } else if (cmd === 'ABORT') {
+          isAborted = true;
+          if (pauseResolver) {
+            pauseResolver();
+            pauseResolver = null;
+          }
+          self.postMessage({ evt: 'LOG', message: '[SYSTEM] Abort requested by user.' });
+        }
+      };
+    `;
+
+    // -----------------------------------------------------------------------
+    // MOD_4: EXPORTERS
+    // -----------------------------------------------------------------------
+    const Exporters = {
+      downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      },
+
+      toCSV(records, videoId = 'comments') {
+        const headers = ['id', 'parentId', 'author', 'authorId', 'publishedAt', 'likeCount', 'replyCount', 'text'];
+        const rows = [headers.join(',')];
+
+        for (const r of records) {
+          const row = [
+            `"${String(r.id || '').replace(/"/g, '""')}"`,
+            `"${String(r.parentId || '').replace(/"/g, '""')}"`,
+            `"${String(r.author || '').replace(/"/g, '""')}"`,
+            `"${String(r.authorId || '').replace(/"/g, '""')}"`,
+            `"${String(r.publishedAt || '').replace(/"/g, '""')}"`,
+            r.likeCount || 0,
+            r.replyCount || 0,
+            `"${String(r.text || '').replace(/"/g, '""')}"`
+          ];
+          rows.push(row.join(','));
+        }
+
+        // UTF-8 BOM (\ufeff) guarantees Excel, Calc, and spreadsheets recognize emoji symbols natively
+        const csvString = '\ufeff' + rows.join('\r\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8' });
+        this.downloadBlob(blob, `yt_comments_${videoId}.csv`);
+      },
+
+      toJSON(records, videoId = 'comments') {
+        const jsonString = JSON.stringify(records, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
+        this.downloadBlob(blob, `yt_comments_${videoId}.json`);
+      },
+
+      toNDJSON(records, videoId = 'comments') {
+        const ndjsonString = records.map(r => JSON.stringify(r)).join('\n');
+        const blob = new Blob([ndjsonString], { type: 'application/x-ndjson;charset=utf-8' });
+        this.downloadBlob(blob, `yt_comments_${videoId}.ndjson`);
+      },
+
+      toHTML(records, videoId = 'comments') {
+        const escapeHtml = (str) => String(str || '').replace(/[&<>"']/g, m => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[m]));
+
+        const linkify = (text) => text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">$1</a>');
+
+        const commentCards = records.map(c => `
+          <div class="p-4 bg-zinc-900 border border-zinc-800 rounded-lg mb-3">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="font-semibold text-zinc-100 text-sm">${escapeHtml(c.author)}</span>
+              <span class="text-xs text-zinc-400">${escapeHtml(c.publishedAt)}</span>
+              ${c.parentId ? '<span class="text-[10px] bg-blue-900/60 text-blue-300 px-1.5 py-0.5 rounded">Reply</span>' : ''}
+            </div>
+            <div class="text-sm text-zinc-200 whitespace-pre-wrap leading-relaxed">${linkify(escapeHtml(c.text))}</div>
+            <div class="mt-2.5 flex items-center gap-4 text-xs text-zinc-400">
+              <span class="flex items-center gap-1">👍 ${c.likeCount || 0}</span>
+              ${c.replyCount ? `<span class="flex items-center gap-1">💬 ${c.replyCount} replies</span>` : ''}
+            </div>
+          </div>
+        `).join('');
+
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube Comments — ${escapeHtml(videoId)}</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen p-6 font-sans">
+  <div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between pb-4 mb-6 border-b border-zinc-800">
+      <div>
+        <h1 class="text-xl font-bold text-zinc-100">YouTube Comments (${records.length})</h1>
+        <p class="text-xs text-zinc-400">Video ID: ${escapeHtml(videoId)}</p>
+      </div>
+      <a href="https://www.youtube.com/watch?v=${escapeHtml(videoId)}" target="_blank" class="text-xs text-blue-400 hover:underline">Watch on YouTube &rarr;</a>
+    </div>
+    <div>${commentCards}</div>
+  </div>
+</body>
+</html>`;
+
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        this.downloadBlob(blob, `yt_comments_${videoId}.html`);
+      }
+    };
+
+    // -----------------------------------------------------------------------
+    // UI Controller & Main Loop
+    // -----------------------------------------------------------------------
+    class AppController {
+      constructor() {
+        this.worker = null;
+        this.config = ConfigStore.get();
+        this.currentVideoId = null;
+        this.isFetching = false;
+        this.isPaused = false;
+        this.startTime = 0;
+        this.timerInterval = null;
+        this.totalCollected = 0;
+        this.currentPage = 1;
+        this.currentSortBy = 'default';
+
+        this.initDOM();
+        this.bindEvents();
+        this.applyTheme(this.config.theme);
+        this.refreshGrid();
+      }
+
+      initDOM() {
+        this.dom = {
+          videoUrl: document.getElementById('videoUrl'),
+          videoIdBadge: document.getElementById('videoIdBadge'),
+          btnPaste: document.getElementById('btnPaste'),
+          engineSelect: document.getElementById('engineSelect'),
+          sortSelect: document.getElementById('sortSelect'),
+          maxLimitInput: document.getElementById('maxLimitInput'),
+          chkReplies: document.getElementById('chkReplies'),
+          btnStart: document.getElementById('btnStart'),
+          btnPause: document.getElementById('btnPause'),
+          btnPauseText: document.getElementById('btnPauseText'),
+          btnAbort: document.getElementById('btnAbort'),
+          btnClearDB: document.getElementById('btnClearDB'),
+          statusText: document.getElementById('statusText'),
+          statCount: document.getElementById('statCount'),
+          statSpeed: document.getElementById('statSpeed'),
+          statTime: document.getElementById('statTime'),
+          progressBar: document.getElementById('progressBar'),
+          statusAlert: document.getElementById('statusAlert'),
+          videoMetaText: document.getElementById('videoMetaText'),
+          engineBadge: document.getElementById('engineBadge'),
+          engineBadgeText: document.getElementById('engineBadgeText'),
+          filterKeyword: document.getElementById('filterKeyword'),
+          filterMinLikes: document.getElementById('filterMinLikes'),
+          filterType: document.getElementById('filterType'),
+          commentTableBody: document.getElementById('commentTableBody'),
+          pageRangeText: document.getElementById('pageRangeText'),
+          pageTotalText: document.getElementById('pageTotalText'),
+          currentPageText: document.getElementById('currentPageText'),
+          totalPagesText: document.getElementById('totalPagesText'),
+          btnPrevPage: document.getElementById('btnPrevPage'),
+          btnNextPage: document.getElementById('btnNextPage'),
+          btnExportCSV: document.getElementById('btnExportCSV'),
+          btnExportJSON: document.getElementById('btnExportJSON'),
+          btnExportNDJSON: document.getElementById('btnExportNDJSON'),
+          btnExportHTML: document.getElementById('btnExportHTML'),
+          btnSettings: document.getElementById('btnSettings'),
+          settingsModal: document.getElementById('settingsModal'),
+          btnCloseSettings: document.getElementById('btnCloseSettings'),
+          btnSaveSettings: document.getElementById('btnSaveSettings'),
+          inputApiKey: document.getElementById('inputApiKey'),
+          inputCorsProxy: document.getElementById('inputCorsProxy'),
+          selectPresetProxy: document.getElementById('selectPresetProxy'),
+          btnThemeToggle: document.getElementById('btnThemeToggle'),
+          themeIconDark: document.getElementById('themeIconDark'),
+          themeIconLight: document.getElementById('themeIconLight'),
+          thLikes: document.getElementById('thLikes'),
+          thDate: document.getElementById('thDate')
+        };
+
+        // Populate controls with config
+        this.dom.engineSelect.value = this.config.engine;
+        this.dom.sortSelect.value = this.config.sort;
+        this.dom.maxLimitInput.value = this.config.maxLimit;
+        this.dom.chkReplies.checked = this.config.includeReplies;
+        this.dom.inputApiKey.value = this.config.apiKey;
+        this.dom.inputCorsProxy.value = this.config.corsProxy;
+        this.updateEngineBadge();
+      }
+
+      bindEvents() {
+        // Video URL extraction on input
+        this.dom.videoUrl.addEventListener('input', () => this.onUrlInput());
+        this.dom.btnPaste.addEventListener('click', async () => {
+          try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+              this.dom.videoUrl.value = text.trim();
+              this.onUrlInput();
+            }
+          } catch (_) {}
+        });
+
+        // Start / Pause / Abort
+        this.dom.btnStart.addEventListener('click', () => this.startExtraction());
+        this.dom.btnPause.addEventListener('click', () => this.togglePause());
+        this.dom.btnAbort.addEventListener('click', () => this.abortExtraction());
+        this.dom.btnClearDB.addEventListener('click', async () => {
+          if (confirm('Clear all cached comments from the local database?')) {
+            await CommentDB.clear();
+            this.totalCollected = 0;
+            this.dom.statCount.textContent = '0';
+            this.refreshGrid();
+          }
+        });
+
+        // Instant Filter Events
+        this.dom.filterKeyword.addEventListener('input', () => { this.currentPage = 1; this.refreshGrid(); });
+        this.dom.filterMinLikes.addEventListener('input', () => { this.currentPage = 1; this.refreshGrid(); });
+        this.dom.filterType.addEventListener('change', () => { this.currentPage = 1; this.refreshGrid(); });
+
+        // Sorting
+        this.dom.thLikes.addEventListener('click', () => {
+          this.currentSortBy = this.currentSortBy === 'likes_desc' ? 'likes_asc' : 'likes_desc';
+          this.refreshGrid();
+        });
+        this.dom.thDate.addEventListener('click', () => {
+          this.currentSortBy = this.currentSortBy === 'date_desc' ? 'date_asc' : 'date_desc';
+          this.refreshGrid();
+        });
+
+        // Pagination
+        this.dom.btnPrevPage.addEventListener('click', () => {
+          if (this.currentPage > 1) {
+            this.currentPage--;
+            this.refreshGrid();
+          }
+        });
+        this.dom.btnNextPage.addEventListener('click', () => {
+          this.currentPage++;
+          this.refreshGrid();
+        });
+
+        // Exports
+        this.dom.btnExportCSV.addEventListener('click', async () => {
+          const records = await CommentDB.getAll();
+          if (records.length === 0) return alert('No comments to export.');
+          Exporters.toCSV(records, this.currentVideoId || 'comments');
+        });
+        this.dom.btnExportJSON.addEventListener('click', async () => {
+          const records = await CommentDB.getAll();
+          if (records.length === 0) return alert('No comments to export.');
+          Exporters.toJSON(records, this.currentVideoId || 'comments');
+        });
+        this.dom.btnExportNDJSON.addEventListener('click', async () => {
+          const records = await CommentDB.getAll();
+          if (records.length === 0) return alert('No comments to export.');
+          Exporters.toNDJSON(records, this.currentVideoId || 'comments');
+        });
+        this.dom.btnExportHTML.addEventListener('click', async () => {
+          const records = await CommentDB.getAll();
+          if (records.length === 0) return alert('No comments to export.');
+          Exporters.toHTML(records, this.currentVideoId || 'comments');
+        });
+
+        // Settings Modal
+        this.dom.btnSettings.addEventListener('click', () => this.dom.settingsModal.classList.remove('hidden'));
+        this.dom.btnCloseSettings.addEventListener('click', () => this.dom.settingsModal.classList.add('hidden'));
+        this.dom.selectPresetProxy.addEventListener('change', (e) => {
+          if (e.target.value !== 'custom') {
+            this.dom.inputCorsProxy.value = e.target.value;
+          }
+        });
+        this.dom.btnSaveSettings.addEventListener('click', () => {
+          this.config.apiKey = this.dom.inputApiKey.value.trim();
+          this.config.corsProxy = this.dom.inputCorsProxy.value.trim() || 'https://corsproxy.io/?';
+          ConfigStore.save(this.config);
+          this.dom.settingsModal.classList.add('hidden');
+          this.showAlert('Settings saved successfully.', 'info');
+        });
+
+        // Theme Toggle
+        this.dom.btnThemeToggle.addEventListener('click', () => {
+          const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+          this.applyTheme(newTheme);
+        });
+
+        // Engine Select change
+        this.dom.engineSelect.addEventListener('change', (e) => {
+          this.config.engine = e.target.value;
+          ConfigStore.save({ engine: this.config.engine });
+          this.updateEngineBadge();
+        });
+      }
+
+      applyTheme(theme) {
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+          this.dom.themeIconDark.classList.remove('hidden');
+          this.dom.themeIconLight.classList.add('hidden');
+        } else {
+          document.documentElement.classList.remove('dark');
+          this.dom.themeIconDark.classList.add('hidden');
+          this.dom.themeIconLight.classList.remove('hidden');
+        }
+        ConfigStore.save({ theme });
+      }
+
+      updateEngineBadge() {
+        const isApi = this.dom.engineSelect.value === 'API';
+        this.dom.engineBadgeText.textContent = isApi ? 'Engine: API v3' : 'Engine: Innertube';
+      }
+
+      parseVideoId(input) {
+        if (!input || typeof input !== 'string') return null;
+        const clean = input.trim();
+        if (/^[a-zA-Z0-9_-]{11}$/.test(clean)) return clean;
+        const match = clean.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([a-zA-Z0-9_-]{11})/);
+        return match ? match[1] : null;
+      }
+
+      onUrlInput() {
+        const vid = this.parseVideoId(this.dom.videoUrl.value);
+        if (vid) {
+          this.currentVideoId = vid;
+          this.dom.videoIdBadge.textContent = vid;
+          this.dom.videoIdBadge.classList.remove('hidden');
+          this.dom.videoMetaText.textContent = `Target Video: ${vid}`;
+        } else {
+          this.dom.videoIdBadge.classList.add('hidden');
+          this.dom.videoMetaText.textContent = '';
+        }
+      }
+
+      showAlert(msg, type = 'info') {
+        this.dom.statusAlert.classList.remove('hidden');
+        if (type === 'error') {
+          this.dom.statusAlert.className = 'text-xs rounded-lg p-3 bg-red-950/80 border border-red-700 text-red-200';
+        } else if (type === 'warn') {
+          this.dom.statusAlert.className = 'text-xs rounded-lg p-3 bg-yellow-950/80 border border-yellow-700 text-yellow-200';
+        } else {
+          this.dom.statusAlert.className = 'text-xs rounded-lg p-3 bg-nord-2 border border-nord-3 text-nord-5';
+        }
+        this.dom.statusAlert.textContent = msg;
+      }
+
+      hideAlert() {
+        this.dom.statusAlert.classList.add('hidden');
+      }
+
+      async startExtraction() {
+        const videoId = this.parseVideoId(this.dom.videoUrl.value);
+        if (!videoId) {
+          this.showAlert('Please enter a valid YouTube URL or 11-character video ID.', 'error');
+          return;
+        }
+
+        const engine = this.dom.engineSelect.value;
+        if (engine === 'API' && !this.config.apiKey) {
+          this.showAlert('Official YouTube Data API v3 requires an API Key. Please open Settings and enter your key, or switch to Innertube (Proxy).', 'error');
+          this.dom.settingsModal.classList.remove('hidden');
+          return;
+        }
+
+        this.hideAlert();
+        this.currentVideoId = videoId;
+        this.isFetching = true;
+        this.isPaused = false;
+        this.totalCollected = 0;
+        this.startTime = Date.now();
+
+        // Clear previous comments from database
+        await CommentDB.clear();
+
+        // Update UI state
+        this.dom.btnStart.disabled = true;
+        this.dom.btnPause.disabled = false;
+        this.dom.btnAbort.disabled = false;
+        this.dom.btnPauseText.textContent = 'Pause';
+        this.dom.statusText.textContent = 'Status: Fetching...';
+        this.dom.statCount.textContent = '0';
+        this.dom.statSpeed.textContent = '0/s';
+        this.dom.progressBar.style.width = '10%';
+
+        // Start Telemetry Timer
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.timerInterval = setInterval(() => this.updateTelemetry(), 1000);
+
+        // Instantiate inline Web Worker via Blob
+        if (this.worker) this.worker.terminate();
+        const blob = new Blob([workerScript], { type: 'application/javascript' });
+        this.worker = new Worker(URL.createObjectURL(blob));
+
+        this.worker.onmessage = async (e) => {
+          const { evt, data, total, error, message } = e.data || {};
+
+          if (evt === 'BATCH') {
+            await CommentDB.bulkPut(data);
+            this.totalCollected = total;
+            this.dom.statCount.textContent = total.toLocaleString();
+
+            const max = parseInt(this.dom.maxLimitInput.value, 10);
+            if (max > 0) {
+              const pct = Math.min(100, Math.round((total / max) * 100));
+              this.dom.progressBar.style.width = `${pct}%`;
             } else {
-                if (pollInterval) {
-                    clearInterval(pollInterval);
-                    pollInterval = null;
-                }
-                startBtn.disabled = false;
-                cancelBtn.classList.add('hidden');
-                if (data.status === 'done' && data.total_comments > 0) {
-                    downloadBtn.classList.remove('hidden');
-                }
+              this.dom.progressBar.style.width = '60%';
             }
-        } catch (err) {
-            console.error(err);
+
+            this.refreshGrid();
+          } else if (evt === 'LOG') {
+            this.showAlert(message, 'info');
+          } else if (evt === 'RATE_LIMIT') {
+            this.showAlert(error || 'Rate limit detected. Waiting before retry...', 'warn');
+          } else if (evt === 'ERROR') {
+            this.showAlert(error || 'Extraction error occurred.', 'error');
+            this.stopTelemetry();
+            this.dom.statusText.textContent = 'Status: Error';
+            this.resetButtons();
+          } else if (evt === 'STATUS') {
+            this.dom.statusText.textContent = `Status: ${data}`;
+          } else if (evt === 'DONE') {
+            this.stopTelemetry();
+            this.dom.statusText.textContent = 'Status: Complete';
+            this.dom.progressBar.style.width = '100%';
+            this.showAlert(`Extraction finished successfully. Total comments fetched: ${total.toLocaleString()}`, 'info');
+            this.resetButtons();
+            this.refreshGrid();
+          }
+        };
+
+        const maxLimit = parseInt(this.dom.maxLimitInput.value, 10) || 0;
+        const sort = this.dom.sortSelect.value;
+        const includeReplies = this.dom.chkReplies.checked;
+
+        this.worker.postMessage({
+          cmd: 'START',
+          videoId,
+          engine,
+          apiKey: this.config.apiKey,
+          corsProxy: this.config.corsProxy,
+          sort,
+          maxLimit,
+          includeReplies
+        });
+      }
+
+      togglePause() {
+        if (!this.isFetching || !this.worker) return;
+        if (!this.isPaused) {
+          this.worker.postMessage({ cmd: 'PAUSE' });
+          this.isPaused = true;
+          this.dom.btnPauseText.textContent = 'Resume';
+          this.dom.statusText.textContent = 'Status: Paused';
+        } else {
+          this.worker.postMessage({ cmd: 'RESUME' });
+          this.isPaused = false;
+          this.dom.btnPauseText.textContent = 'Pause';
+          this.dom.statusText.textContent = 'Status: Fetching...';
         }
+      }
+
+      abortExtraction() {
+        if (this.worker) {
+          this.worker.postMessage({ cmd: 'ABORT' });
+        }
+        this.stopTelemetry();
+        this.dom.statusText.textContent = 'Status: Aborted';
+        this.resetButtons();
+      }
+
+      resetButtons() {
+        this.isFetching = false;
+        this.isPaused = false;
+        this.dom.btnStart.disabled = false;
+        this.dom.btnPause.disabled = true;
+        this.dom.btnAbort.disabled = true;
+        this.dom.btnPauseText.textContent = 'Pause';
+      }
+
+      updateTelemetry() {
+        if (!this.startTime) return;
+        const elapsedSec = Math.max(1, Math.floor((Date.now() - this.startTime) / 1000));
+        const mins = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+        const secs = String(elapsedSec % 60).padStart(2, '0');
+        this.dom.statTime.textContent = `${mins}:${secs}`;
+
+        const speed = Math.round(this.totalCollected / elapsedSec);
+        this.dom.statSpeed.textContent = `${speed}/s`;
+      }
+
+      stopTelemetry() {
+        if (this.timerInterval) {
+          clearInterval(this.timerInterval);
+          this.timerInterval = null;
+        }
+      }
+
+      async refreshGrid() {
+        const keyword = this.dom.filterKeyword.value;
+        const minLikes = parseInt(this.dom.filterMinLikes.value, 10) || 0;
+        const type = this.dom.filterType.value;
+
+        const res = await CommentDB.query({
+          keyword,
+          minLikes,
+          type,
+          sortBy: this.currentSortBy,
+          page: this.currentPage,
+          pageSize: 100
+        });
+
+        this.dom.pageTotalText.textContent = res.total.toLocaleString();
+        this.dom.currentPageText.textContent = res.page.toString();
+        this.dom.totalPagesText.textContent = res.totalPages.toString();
+
+        const startIdx = res.total === 0 ? 0 : (res.page - 1) * res.pageSize + 1;
+        const endIdx = Math.min(res.total, res.page * res.pageSize);
+        this.dom.pageRangeText.textContent = `${startIdx}-${endIdx}`;
+
+        this.dom.btnPrevPage.disabled = res.page <= 1;
+        this.dom.btnNextPage.disabled = res.page >= res.totalPages;
+
+        if (res.items.length === 0) {
+          this.dom.commentTableBody.innerHTML = `
+            <tr>
+              <td colspan="6" class="py-12 text-center text-nord-3 italic">
+                ${res.total === 0 ? 'No comments match your filter criteria.' : 'No comments found.'}
+              </td>
+            </tr>`;
+          return;
+        }
+
+        const escapeHtml = (str) => String(str || '').replace(/[&<>"']/g, m => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[m]));
+
+        this.dom.commentTableBody.innerHTML = res.items.map((c, idx) => {
+          const rowNum = startIdx + idx;
+          const authorInitial = (c.author || '?').charAt(0).toUpperCase();
+          const isReply = c.parentId !== null;
+          return `
+            <tr class="hover:bg-nord-2/40 transition">
+              <td class="py-2.5 px-3 text-center text-nord-3 font-mono">${rowNum}</td>
+              <td class="py-2.5 px-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-full bg-nord-10 text-nord-6 flex items-center justify-center font-bold text-[10px] flex-shrink-0">
+                    ${authorInitial}
+                  </div>
+                  <div class="truncate max-w-[140px] font-medium text-nord-5" title="${escapeHtml(c.author)}">
+                    ${escapeHtml(c.author)}
+                  </div>
+                </div>
+              </td>
+              <td class="py-2.5 px-3">
+                <div class="line-clamp-2 text-nord-4 leading-relaxed" title="${escapeHtml(c.text)}">
+                  ${isReply ? '<span class="text-[10px] bg-nord-9/30 text-nord-8 px-1 py-0.5 rounded font-mono mr-1.5">Reply</span>' : ''}
+                  ${escapeHtml(c.text)}
+                </div>
+              </td>
+              <td class="py-2.5 px-3 text-right font-mono font-medium text-nord-8">${(c.likeCount || 0).toLocaleString()}</td>
+              <td class="py-2.5 px-3 text-center text-nord-4 font-mono">${c.replyCount || 0}</td>
+              <td class="py-2.5 px-3 text-nord-3 font-mono text-[11px] truncate" title="${escapeHtml(c.publishedAt)}">${escapeHtml(c.publishedAt)}</td>
+            </tr>`;
+        }).join('');
+      }
     }
 
-    downloadBtn.addEventListener('click', () => {
-        window.location.href = `${getApiBase()}/api/download`;
-    });
-
+    // Initialize application on DOM ready
     document.addEventListener('DOMContentLoaded', () => {
-        checkBackendHealth();
+      new AppController();
     });
-</script>
+  </script>
 </body>
 </html>

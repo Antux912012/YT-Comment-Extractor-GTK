@@ -15,7 +15,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt Flask==3.0.0 werkzeug==3.0.0 zeroconf==0.131.0
 
 # Copy application code
-COPY scraper.py web_app.py ./
+COPY scraper.py exporters.py web_app.py ./
 COPY templates/ ./templates/
 
 # Run as non-privileged user (appuser:1000)

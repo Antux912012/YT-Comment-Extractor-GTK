@@ -32,7 +32,7 @@ modules:
     buildsystem: simple
     build-commands:
       - mkdir -p /app/share/yt-extractor/templates
-      - cp scraper.py web_app.py service_manager.py icon.png /app/share/yt-extractor/
+      - cp scraper.py exporters.py web_app.py service_manager.py icon.png /app/share/yt-extractor/
       - cp templates/index.html /app/share/yt-extractor/templates/
       - install -D start-yt-extractor-service /app/bin/start-yt-extractor-service
       - install -D io.github.antux912012.YTCommentExtractor.Service.desktop /app/share/applications/io.github.antux912012.YTCommentExtractor.Service.desktop

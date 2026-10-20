@@ -1,11 +1,11 @@
+import io
 import os
-import sys
-import threading
 import socket
-import random
-import csv
+import sys
 import tempfile
-from flask import Flask, render_template, request, jsonify, send_file
+import threading
+
+from flask import Flask, jsonify, render_template, request, send_file
 from werkzeug.utils import secure_filename
 
 try:
@@ -14,7 +14,8 @@ try:
 except ImportError:
     ZEROCONF_AVAILABLE = False
 
-from scraper import get_comments_scraper_gen, extract_video_id
+from exporters import export_to_csv, export_to_html, export_to_json
+from scraper import apply_sampling, calculate_pool_size, extract_video_id, get_comments_scraper_gen
 
 APP_VERSION = "0.5"
 
@@ -34,8 +35,7 @@ app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 def add_cors_headers(response):
     origin = request.headers.get('Origin', '')
     if (
-        origin.startswith('http://localhost')
-        or origin.startswith('http://127.0.0.1')
+        origin.startswith(('http://localhost', 'http://127.0.0.1'))
         or origin.endswith('.github.io')
     ):
         response.headers['Access-Control-Allow-Origin'] = origin
@@ -56,7 +56,8 @@ extraction_state = {
     "comments": [],
     "logs": [],
     "progress": 0,
-    "total_target": 0
+    "total_target": 0,
+    "video_info": {}
 }
 stop_event = threading.Event()
 extraction_lock = threading.Lock()
@@ -89,23 +90,13 @@ def run_extraction(url, sort_mode_str, strategy_idx, sample_size, pool_size, inc
         extraction_state["logs"] = []
         extraction_state["progress"] = 0
         extraction_state["total_target"] = sample_size if strategy_idx != 0 else "All"
+        extraction_state["video_info"] = {}
         stop_event.clear()
 
     extraction_state["logs"].append(f"[SYSTEM] Starting yt-dlp extraction for URL: {url}")
 
     try:
-        # Determine extraction pool size
-        # Strategy 0: Full scan (All comments)
-        # Strategy 1: Unbiased Random Sample (Full pool)
-        # Strategy 2: Fast Random Sample (Bounded pool)
-        # Strategy 3: Sequential (First N)
-        if strategy_idx in (0, 1):
-            max_pool = None
-        elif strategy_idx == 2:
-            bounded_pool = pool_size if (pool_size and pool_size > 0) else 2000
-            max_pool = max(bounded_pool, sample_size)
-        else:
-            max_pool = sample_size
+        max_pool = calculate_pool_size(strategy_idx, sample_size, pool_size)
 
         gen = get_comments_scraper_gen(
             video_url=url,
@@ -124,6 +115,8 @@ def run_extraction(url, sort_mode_str, strategy_idx, sample_size, pool_size, inc
                 extraction_state["logs"].append(chunk['log'])
             if 'stats' in chunk:
                 extraction_state["progress"] = chunk['stats']['total']
+            if 'video_info' in chunk:
+                extraction_state["video_info"] = chunk['video_info']
             if 'error' in chunk:
                 extraction_state["status"] = "error"
                 extraction_state["logs"].append(f"[ERROR] {chunk['error']}")
@@ -131,6 +124,8 @@ def run_extraction(url, sort_mode_str, strategy_idx, sample_size, pool_size, inc
             if 'result' in chunk:
                 all_comments = chunk['result']
                 aborted = chunk.get('aborted', False)
+                if 'video_info' in chunk:
+                    extraction_state["video_info"] = chunk['video_info']
 
         if not all_comments:
             if aborted:
@@ -141,26 +136,9 @@ def run_extraction(url, sort_mode_str, strategy_idx, sample_size, pool_size, inc
                 extraction_state["logs"].append("[ERROR] No comments were retrieved from YouTube.")
             return
 
-        # Apply sampling strategy
-        if strategy_idx in (1, 2) and sample_size > 0:
-            if len(all_comments) > sample_size:
-                extraction_state["logs"].append(
-                    f"[SAMPLE] Applying uniform random sampling: selecting {sample_size} from {len(all_comments)} comments."
-                )
-                final_comments = random.sample(all_comments, sample_size)
-            else:
-                msg = (
-                    f"[SAMPLE] Total collected ({len(all_comments)}) <= requested sample ({sample_size}). "
-                    f"Keeping all {len(all_comments)} available comments."
-                )
-                if not include_replies:
-                    msg += " (Replies excluded per settings; all available top-level comments retrieved)."
-                extraction_state["logs"].append(msg)
-                final_comments = all_comments
-        elif strategy_idx == 3 and sample_size > 0:
-            final_comments = all_comments[:sample_size]
-        else:
-            final_comments = all_comments
+        final_comments, sample_log = apply_sampling(all_comments, strategy_idx, sample_size, include_replies)
+        if sample_log:
+            extraction_state["logs"].append(sample_log)
 
         extraction_state["comments"] = final_comments
         extraction_state["progress"] = len(final_comments)
@@ -175,13 +153,14 @@ def run_extraction(url, sort_mode_str, strategy_idx, sample_size, pool_size, inc
             )
 
     except Exception as e:
-        extraction_state["logs"].append(f"[FATAL] Unexpected error: {str(e)}")
+        extraction_state["logs"].append(f"[FATAL] Unexpected error: {e}")
         extraction_state["status"] = "error"
     finally:
         if cookies_path and os.path.exists(cookies_path):
             try:
                 os.remove(cookies_path)
-            except Exception:
+            except OSError:
+                pass
                 pass
 
 
@@ -249,37 +228,40 @@ def api_status():
     })
 
 
-@app.route('/api/download')
-def api_download():
+@app.route('/api/download', methods=['GET'])
+@app.route('/api/download/<string:fmt>', methods=['GET'])
+def api_download(fmt=None):
     if extraction_state["status"] != "done" or not extraction_state["comments"]:
-        return "Extraction not finished or no comments available.", 400
+        return jsonify({"error": "Extraction not finished or no comments available."}), 400
 
-    out_path = os.path.join(app.config['UPLOAD_FOLDER'], 'comments_export.csv')
-    with open(out_path, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow([
-            'Comment ID',
-            'Author',
-            'Channel ID',
-            'Published Date',
-            'Likes',
-            'Is Reply',
-            'Reply Count',
-            'Comment Text'
-        ])
-        for c in extraction_state["comments"]:
-            writer.writerow([
-                c.get('cid', ''),
-                c.get('nickname', ''),
-                c.get('channel_id', ''),
-                c.get('date', ''),
-                c.get('votes', '0'),
-                'Yes' if c.get('is_reply', False) else 'No',
-                c.get('reply_count', 0),
-                c.get('comment', '')
-            ])
+    export_format = (fmt or request.args.get('format', 'csv')).lower().strip()
+    video_info = extraction_state.get("video_info") or {}
+    vid = video_info.get("video_id") or "export"
 
-    return send_file(out_path, as_attachment=True, download_name="comments_export.csv")
+    if export_format == 'json':
+        data = export_to_json(extraction_state["comments"], video_info)
+        return send_file(
+            io.BytesIO(data),
+            as_attachment=True,
+            download_name=f"yt_comments_{vid}.json",
+            mimetype="application/json; charset=utf-8"
+        )
+    elif export_format == 'html':
+        data = export_to_html(extraction_state["comments"], video_info)
+        return send_file(
+            io.BytesIO(data),
+            as_attachment=True,
+            download_name=f"yt_comments_{vid}.html",
+            mimetype="text/html; charset=utf-8"
+        )
+    else:  # csv (keeps emoji symbols via utf-8-sig)
+        data = export_to_csv(extraction_state["comments"])
+        return send_file(
+            io.BytesIO(data),
+            as_attachment=True,
+            download_name=f"yt_comments_{vid}.csv",
+            mimetype="text/csv; charset=utf-8"
+        )
 
 
 def register_mdns():
