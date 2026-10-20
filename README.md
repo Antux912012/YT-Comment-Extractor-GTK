@@ -4,11 +4,26 @@
 
 # YouTube Comment Extractor
 
-A native GTK4/Libadwaita application for Linux that allows users to extract comments from YouTube videos. The application leverages `yt-dlp` to bypass YouTube API restrictions and provides various sampling strategies for efficient data extraction.
+<p align="center">
+  <a href="https://antux912012.github.io/YT-Comment-Extractor-GTK/">
+    <img src="https://img.shields.io/badge/Web%20App-Try%20Online%20(GitHub%20Pages)-brightgreen?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Live Web App" />
+  </a>
+  <a href="https://antux912012.github.io/YT-Comment-Extractor-GTK/">
+    <img src="https://img.shields.io/badge/GitHub%20Pages-Live-blue?style=for-the-badge&logo=github" alt="GitHub Pages" />
+  </a>
+</p>
+
+> ### 🌐 Try It Online (No Installation Needed)
+> You can extract comments directly in your web browser with zero installation:  
+> **👉 [https://antux912012.github.io/YT-Comment-Extractor-GTK/](https://antux912012.github.io/YT-Comment-Extractor-GTK/)**  
+> *Supports browser-based extraction via CORS proxy or official YouTube Data API v3, random/ordered sampling, and instant CSV/JSON exports.*
+
+A native GTK4/Libadwaita application for Linux and static browser web app that allows users to extract comments from YouTube videos. The application leverages `yt-dlp` in the desktop version and client-side web workers in the online edition to bypass YouTube API restrictions and provides various sampling strategies for efficient data extraction.
 
 ## Features
 
 - **GTK4/Libadwaita UI**: Seamless integration with modern GNOME desktops, including full GNOME Human Interface Guidelines (HIG) compliant multi-resolution and symbolic icon suite.
+- **Online Web Edition (GitHub Pages)**: Run anywhere on any device at **[https://antux912012.github.io/YT-Comment-Extractor-GTK/](https://antux912012.github.io/YT-Comment-Extractor-GTK/)**.
 - **`yt-dlp` Streaming Engine**: Directly parses comments, avoiding YouTube Data API quotas or keys in the desktop/service editions.
 - **Advanced Sampling Strategies**: Support for uniform random sampling, bounded pool sampling, sequential ordering, and full exhaustive extraction.
 - **De-biasing Filter**: Option to isolate top-level comments and exclude discussion reply threads to prevent conversation-density bias in research datasets.
@@ -19,6 +34,7 @@ A native GTK4/Libadwaita application for Linux that allows users to extract comm
   - **NDJSON (`.ndjson`)**: Newline-delimited JSON stream for large-scale data ingestion.
   - **Interactive HTML (`.html`)**: Standalone, responsive web export styled authentically like YouTube's comments UI with user avatars, likes/replies metrics, collapsible reply threads, and real-time client-side search.
 - **Static Web Client (GitHub Pages SPA)**:
+  - **Live URL**: **[https://antux912012.github.io/YT-Comment-Extractor-GTK/](https://antux912012.github.io/YT-Comment-Extractor-GTK/)**
   - 100% static client-side single-page application with zero backend.
   - Dual fetch engines: Official YouTube Data API v3 or Keyless Innertube via CORS proxy.
   - Inline Web Worker for pagination concurrency without UI lag.
