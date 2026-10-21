@@ -4,10 +4,25 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
   <name>YouTube Comment Extractor Service</name>
-  <summary>Background web server and system tray service for YouTube Comment Extractor</summary>
+  <summary>Background extraction daemon and system tray controller for YouTube Comment Extractor</summary>
   <description>
-    <p>Background web server and system tray indicator service for YouTube Comment Extractor, providing a local browser dashboard for automated comment scraping and analysis.</p>
+    <p>
+      YouTube Comment Extractor Service provides a background REST API, WebSocket progress streamer, and system tray indicator (StatusNotifierItem) for the YouTube Comment Extractor ecosystem.
+    </p>
+    <p>
+      It allows client applications and web dashboards to run heavy extraction tasks asynchronously in the background with minimal host resource usage.
+    </p>
+    <ul>
+      <li>System Tray Control: Start, stop, and inspect the extractor daemon directly from the top panel</li>
+      <li>REST &amp; WebSocket API: Real-time progress updates and JSON payloads for external dashboards and scripts</li>
+      <li>Local Web Dashboard: Embedded browser interface accessible from any browser on localhost</li>
+      <li>Low-Footprint Daemon: Lightweight background runner with zero overhead when idle</li>
+    </ul>
   </description>
+  <branding>
+    <color type="primary" scheme_preference="light">#e01b24</color>
+    <color type="primary" scheme_preference="dark">#a51d2d</color>
+  </branding>
   <launchable type="desktop-id">io.github.antux912012.YTCommentExtractor.Service.desktop</launchable>
   <url type="homepage">https://github.com/Antux912012/YT-Comment-Extractor-GTK</url>
   <developer id="io.github.antux912012">

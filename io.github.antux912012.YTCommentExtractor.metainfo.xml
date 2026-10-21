@@ -4,10 +4,26 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
   <name>YouTube Comment Extractor</name>
-  <summary>Extract and analyze YouTube video comments with GTK4 and Libadwaita</summary>
+  <summary>Extract, filter, and export YouTube comments with GTK4 and multi-format reports</summary>
   <description>
-    <p>A native GTK4/Libadwaita application for Linux that allows users to extract, filter, export, and analyze comments from YouTube videos. Features advanced sampling strategies (uniform random, bounded pool, sequential) and multi-format exports (CSV with emojis, formatted JSON, YouTube-styled HTML).</p>
+    <p>
+      YouTube Comment Extractor is a native GTK4 and Libadwaita desktop application designed for researchers, creators, and data analysts to harvest, inspect, and export YouTube video comments and reply trees.
+    </p>
+    <p>
+      Featuring an integrated login browser to harvest Netscape cookies, the application easily bypasses rate limits and age gates while keeping all data stored locally on your machine.
+    </p>
+    <ul>
+      <li>Full Comment Tree Extraction: Downloads top-level comments, nested replies, author metadata, like counts, and timestamps</li>
+      <li>Built-in Cookie Harvester: Mini-browser for authentication without manual cookie export extensions</li>
+      <li>Multi-Format Export: One-click export to CSV (preserving emojis and special characters), structured JSON, and HTML tables</li>
+      <li>Statistical Sampling: Uniform random and bounded Poisson sampling modes for large datasets</li>
+      <li>Dual Backend Support: Run scraping tasks via local processes or delegate to the Dockerized extractor service</li>
+    </ul>
   </description>
+  <branding>
+    <color type="primary" scheme_preference="light">#e01b24</color>
+    <color type="primary" scheme_preference="dark">#a51d2d</color>
+  </branding>
   <launchable type="desktop-id">io.github.antux912012.YTCommentExtractor.desktop</launchable>
   <url type="homepage">https://github.com/Antux912012/YT-Comment-Extractor-GTK</url>
   <developer id="io.github.antux912012">
